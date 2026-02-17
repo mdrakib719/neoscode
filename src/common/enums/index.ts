@@ -14,12 +14,14 @@ export enum TransactionType {
   DEPOSIT = 'DEPOSIT',
   WITHDRAW = 'WITHDRAW',
   TRANSFER = 'TRANSFER',
+  REVERSAL = 'REVERSAL',
 }
 
 export enum TransactionStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
+  REVERSED = 'REVERSED',
 }
 
 export enum LoanStatus {

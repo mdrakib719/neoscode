@@ -1,0 +1,56 @@
+import { create } from 'zustand';
+import { Account } from '../models/types';
+import { accountService } from '../services/account.service';
+
+interface AccountState {
+  accounts: Account[];
+  selectedAccount: Account | null;
+  isLoading: boolean;
+  error: string | null;
+
+  fetchAccounts: () => Promise<void>;
+  createAccount: (accountType: 'SAVINGS' | 'CHECKING') => Promise<void>;
+  selectAccount: (account: Account | null) => void;
+  clearError: () => void;
+}
+
+export const useAccountStore = create<AccountState>((set) => ({
+  accounts: [],
+  selectedAccount: null,
+  isLoading: false,
+  error: null,
+
+  fetchAccounts: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const accounts = await accountService.getAll();
+      set({ accounts, isLoading: false });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch accounts',
+        isLoading: false,
+      });
+    }
+  },
+
+  createAccount: async (accountType) => {
+    set({ isLoading: true, error: null });
+    try {
+      const newAccount = await accountService.create(accountType);
+      set((state) => ({
+        accounts: [...state.accounts, newAccount],
+        isLoading: false,
+      }));
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to create account',
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+
+  selectAccount: (account) => set({ selectedAccount: account }),
+
+  clearError: () => set({ error: null }),
+}));
