@@ -60,6 +60,25 @@ export class Account {
   @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
   monthlyWithdrawalLimit: number;
 
+  // Fixed Deposit / Recurring Deposit specific fields
+  @Column({ type: 'date', nullable: true })
+  maturity_date: Date;
+
+  @Column({ type: 'int', nullable: true })
+  lock_period_months: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  deposit_interest_rate: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  monthly_deposit_amount: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  maturity_amount: number;
+
+  @Column({ type: 'date', nullable: true })
+  deposit_start_date: Date;
+
   @Column()
   user_id: number;
 

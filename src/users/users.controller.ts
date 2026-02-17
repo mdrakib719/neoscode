@@ -2,13 +2,14 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Delete,
   Body,
   Param,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/user.dto';
+import { UpdateUserDto, ChangePasswordDto } from './dto/user.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -23,6 +24,22 @@ export class UsersController {
   @Get('profile')
   getProfile(@GetUser('userId') userId: number) {
     return this.usersService.findOne(userId);
+  }
+
+  @Put('profile')
+  updateProfile(
+    @GetUser('userId') userId: number,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return this.usersService.updateProfile(userId, updateUserDto);
+  }
+
+  @Post('change-password')
+  changePassword(
+    @GetUser('userId') userId: number,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.usersService.changePassword(userId, changePasswordDto);
   }
 
   @Get()

@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsEnum,
   IsOptional,
+  MinLength,
 } from 'class-validator';
 import { UserRole } from '@/common/enums';
 
@@ -36,4 +37,14 @@ export class UpdateUserDto {
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(6)
+  newPassword: string;
 }

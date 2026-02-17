@@ -111,3 +111,40 @@ export const useTransactionStore = create<TransactionState>((set) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+// Helper object for easier access
+export const transactionController = {
+  loadTransactions: (accountId?: number) =>
+    useTransactionStore.getState().fetchTransactions(accountId),
+  deposit: (data: {
+    accountId: number;
+    amount: number;
+    description?: string;
+  }) =>
+    useTransactionStore
+      .getState()
+      .deposit(data.accountId, data.amount, data.description),
+  withdraw: (data: {
+    accountId: number;
+    amount: number;
+    description?: string;
+  }) =>
+    useTransactionStore
+      .getState()
+      .withdraw(data.accountId, data.amount, data.description),
+  transfer: (data: {
+    fromAccountId: number;
+    toAccountId: number;
+    amount: number;
+    description?: string;
+  }) =>
+    useTransactionStore
+      .getState()
+      .transfer(
+        data.fromAccountId,
+        data.toAccountId,
+        data.amount,
+        data.description,
+      ),
+  getTransactions: () => useTransactionStore.getState().transactions,
+};

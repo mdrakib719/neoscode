@@ -45,6 +45,13 @@ export class User {
   @Column({ type: 'text', nullable: true })
   lock_reason: string;
 
+  @Column({ type: 'text', nullable: true })
+  @Exclude()
+  two_factor_secret: string;
+
+  @Column({ default: false })
+  two_factor_enabled: boolean;
+
   @OneToMany(() => Account, (account) => account.user)
   accounts: Account[];
 

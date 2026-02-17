@@ -11,6 +11,7 @@ import { LoansModule } from './loans/loans.module';
 import { InterestModule } from './interest/interest.module';
 import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { DatabaseConfig } from './config/database.config';
 
 @Module({
@@ -46,6 +47,7 @@ import { DatabaseConfig } from './config/database.config';
     InterestModule,
     ReportsModule,
     AdminModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

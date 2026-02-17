@@ -87,8 +87,8 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    user['isActive'] = dto.isActive;
-    await this.userRepository.save(user);
+    user.isActive = dto.isActive;
+    const savedUser = await this.userRepository.save(user);
 
     await this.logAudit(
       adminId,
@@ -101,10 +101,10 @@ export class AdminService {
     return {
       message: `User ${dto.isActive ? 'activated' : 'deactivated'} successfully`,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isActive: dto.isActive,
+        id: savedUser.id,
+        name: savedUser.name,
+        email: savedUser.email,
+        isActive: savedUser.isActive,
       },
     };
   }

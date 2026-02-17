@@ -4,6 +4,9 @@ import { Login } from './views/auth/Login';
 import { Register } from './views/auth/Register';
 import { Dashboard } from './views/dashboard/Dashboard';
 import { AdminPanel } from './views/admin/AdminPanel';
+import { Accounts } from './views/accounts/Accounts';
+import { Transactions } from './views/transactions/Transactions';
+import { Loans } from './views/loans/Loans';
 import { Layout } from './components/Layout/Layout';
 import { useAuthStore } from './controllers/auth.controller';
 import './index.css';
@@ -32,30 +35,9 @@ function App() {
         >
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route
-            path="accounts"
-            element={
-              <div className="card">
-                <h2>Accounts Coming Soon</h2>
-              </div>
-            }
-          />
-          <Route
-            path="transactions"
-            element={
-              <div className="card">
-                <h2>Transactions Coming Soon</h2>
-              </div>
-            }
-          />
-          <Route
-            path="loans"
-            element={
-              <div className="card">
-                <h2>Loans Coming Soon</h2>
-              </div>
-            }
-          />
+          <Route path="accounts" element={<Accounts />} />
+          <Route path="transactions" element={<Transactions />} />
+          <Route path="loans" element={<Loans />} />
           <Route path="admin" element={<AdminPanel />} />
         </Route>
 

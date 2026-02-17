@@ -5,48 +5,75 @@ export interface User {
   name: string;
   email: string;
   role: 'ADMIN' | 'EMPLOYEE' | 'CUSTOMER';
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Account {
   id: number;
-  accountNumber: string;
-  accountType: 'SAVINGS' | 'CHECKING' | 'LOAN';
+  account_number: string;
+  account_type:
+    | 'SAVINGS'
+    | 'CHECKING'
+    | 'LOAN'
+    | 'FIXED_DEPOSIT'
+    | 'RECURRING_DEPOSIT';
   balance: number;
   currency: string;
-  userId: number;
+  user_id: number;
   user?: User;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+  maturity_date?: string;
+  maturity_amount?: number;
+  deposit_interest_rate?: number;
+  lock_period_months?: number;
+  monthly_deposit_amount?: number;
+  deposit_start_date?: string;
+  status?: string;
 }
 
 export interface Transaction {
   id: number;
-  fromAccountId?: number;
-  toAccountId?: number;
+  from_account_id?: number;
+  to_account_id?: number;
   amount: number;
   type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER';
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
   description?: string;
-  createdAt: string;
-  fromAccount?: Account;
-  toAccount?: Account;
+  created_at: string;
+  from_account?: Account;
+  to_account?: Account;
 }
 
 export interface Loan {
   id: number;
-  userId: number;
-  loanType: 'PERSONAL' | 'HOME' | 'VEHICLE' | 'EDUCATION';
+  user_id: number;
+  loan_type: 'PERSONAL' | 'HOME' | 'VEHICLE' | 'EDUCATION';
   amount: number;
-  interestRate: number;
-  tenureMonths: number;
-  emiAmount: number;
+  interest_rate: number;
+  tenure_months: number;
+  emi_amount: number;
+  remaining_balance?: number;
+  paid_installments?: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CLOSED';
   remarks?: string;
   user?: User;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Beneficiary {
+  id: number;
+  user_id: number;
+  beneficiary_name: string;
+  account_number: string;
+  bank_name: string;
+  ifsc_code: string;
+  notes?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface LoginRequest {

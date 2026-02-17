@@ -54,3 +54,13 @@ export const useAccountStore = create<AccountState>((set) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+// Helper object for easier access
+export const accountController = {
+  loadAccounts: () => useAccountStore.getState().fetchAccounts(),
+  createAccount: (type: 'SAVINGS' | 'CHECKING') =>
+    useAccountStore.getState().createAccount(type),
+  getAccounts: () => useAccountStore.getState().accounts,
+  selectAccount: (account: Account | null) =>
+    useAccountStore.getState().selectAccount(account),
+};

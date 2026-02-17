@@ -109,11 +109,17 @@ export const AdminPanel = () => {
 
   const handleActivateUser = async (userId: number, isActive: boolean) => {
     try {
+      console.log('Activating user:', userId, 'to isActive:', isActive);
       await activateUser(userId, isActive);
-      getAllUsers();
+      await getAllUsers();
       alert(`User ${isActive ? 'activated' : 'deactivated'} successfully!`);
-    } catch (error) {
-      alert('Failed to update user status');
+    } catch (error: any) {
+      console.error('Failed to update user status:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to update user status';
+      alert(errorMessage);
     }
   };
 
@@ -307,18 +313,22 @@ export const AdminPanel = () => {
                       </td>
                       <td>
                         <button
+                          type="button"
                           onClick={() =>
                             handleActivateUser(user.id, !user.isActive)
                           }
                           className="btn-small"
+                          disabled={loading}
                         >
                           {user.isActive ? 'Deactivate' : 'Activate'}
                         </button>
                         <button
+                          type="button"
                           onClick={() =>
                             handleLockUser(user.id, !user.isLocked)
                           }
                           className="btn-small btn-warning"
+                          disabled={loading}
                         >
                           {user.isLocked ? 'Unlock' : 'Lock'}
                         </button>

@@ -36,6 +36,12 @@ export class Loan {
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   emi_amount: number;
 
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+  remaining_balance: number;
+
+  @Column({ type: 'int', default: 0 })
+  paid_installments: number;
+
   @Column({
     type: 'enum',
     enum: LoanStatus,

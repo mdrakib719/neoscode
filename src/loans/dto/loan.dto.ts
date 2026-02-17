@@ -5,6 +5,7 @@ import {
   IsInt,
   IsString,
   IsOptional,
+  IsDateString,
 } from 'class-validator';
 import { LoanType } from '@/common/enums';
 
@@ -26,6 +27,20 @@ export class ApplyLoanDto {
 }
 
 export class ApproveLoanDto {
+  @IsString()
+  @IsOptional()
+  remarks?: string;
+}
+
+export class PayEMIDto {
+  @IsNumber()
+  @IsPositive()
+  amount: number;
+
+  @IsInt()
+  @IsOptional()
+  installment_number?: number;
+
   @IsString()
   @IsOptional()
   remarks?: string;

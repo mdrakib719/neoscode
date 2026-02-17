@@ -100,3 +100,45 @@ export const useLoanStore = create<LoanState>((set) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+// Helper controller object for easier component access
+export const loanController = {
+  loadLoans: () => useLoanStore.getState().fetchLoans(),
+
+  applyLoan: (data: {
+    loan_type: string;
+    amount: number;
+    tenure_months: number;
+  }) => {
+    // Calculate interest rate based on loan type
+    const calculateInterestRate = (loanType: string): number => {
+      switch (loanType) {
+        case 'PERSONAL':
+          return 12;
+        case 'HOME':
+          return 8;
+        case 'VEHICLE':
+          return 10;
+        case 'EDUCATION':
+          return 9;
+        default:
+          return 12;
+      }
+    };
+
+    const interestRate = calculateInterestRate(data.loan_type);
+
+    return useLoanStore
+      .getState()
+      .applyLoan(
+        data.loan_type as 'PERSONAL' | 'HOME' | 'VEHICLE' | 'EDUCATION',
+        data.amount,
+        interestRate,
+        data.tenure_months,
+      );
+  },
+
+  getLoans: () => useLoanStore.getState().loans,
+
+  selectLoan: (loan: Loan | null) => useLoanStore.getState().selectLoan(loan),
+};
