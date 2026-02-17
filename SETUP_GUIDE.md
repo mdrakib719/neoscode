@@ -29,12 +29,14 @@ CREATE DATABASE banking_system;
 Install and start Redis:
 
 **macOS (using Homebrew):**
+
 ```bash
 brew install redis
 brew services start redis
 ```
 
 **Ubuntu/Debian:**
+
 ```bash
 sudo apt-get install redis-server
 sudo systemctl start redis
@@ -44,6 +46,7 @@ sudo systemctl start redis
 Download from https://redis.io/download or use WSL
 
 Verify Redis is running:
+
 ```bash
 redis-cli ping
 
@@ -54,6 +57,7 @@ REDIS_PASSWORD=
 ```
 
 ### 5
+
 ### 4. Environment Configuration
 
 Copy the example environment file:
@@ -190,9 +194,11 @@ src/
 ### Issue: Port already in use
 
 **Solution:** Change PORT in `.env` or kill the process using port 3000
+
 # Issue: Redis connection error
 
-**Solution:** 
+**Solution:**
+
 - Ensure Redis is running: `redis-cli ping` should return PONG
 - Check REDIS_HOST and REDIS_PORT in `.env`
 - If using password authentication, set REDIS_PASSWORD
@@ -202,6 +208,7 @@ src/
 **Solution:** Ensure Redis is running and properly configured. The token blacklist requires Redis to immediately invalidate JWT tokens on logout or user ban.
 
 ##
+
 ### Issue: JWT authentication fails
 
 **Solution:** Ensure JWT_SECRET is set in `.env`

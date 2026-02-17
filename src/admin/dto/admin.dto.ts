@@ -42,6 +42,12 @@ export class LockAccountDto {
   reason?: string;
 }
 
+export class UnlockUserDto {
+  @IsString()
+  @IsOptional()
+  reason?: string;
+}
+
 export class AssignRoleDto {
   @IsEnum(UserRole)
   role: UserRole;

@@ -384,5 +384,27 @@ INSERT INTO users (name, email, password, role) VALUES
 -- mysql -u root -p banking_system < banking_system_backup.sql
 
 -- ============================================
+-- Table: token_blacklist
+-- Description: Stores blacklisted JWT tokens and user-level bans.
+--   type = 'logout'   → single token invalidated after logout
+--   type = 'user_ban' → all tokens for a user blocked by admin
+-- token_hash stores SHA-256(rawJWT) — never the raw token itself.
+-- ============================================
+CREATE TABLE IF NOT EXISTS `token_blacklist` (
+  `id`         INT          NOT NULL AUTO_INCREMENT,
+  `token_hash` VARCHAR(64)  NOT NULL COMMENT 'SHA-256 hash of the JWT or user_ban:<userId>',
+  `user_id`    INT          NULL,
+  `type`       VARCHAR(20)  NOT NULL DEFAULT 'logout' COMMENT 'logout | user_ban',
+  `reason`     TEXT         NULL,
+  `expires_at` DATETIME     NOT NULL COMMENT 'Matches JWT expiry — safe to delete after this',
+  `created_at` DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `IDX_token_blacklist_hash`       (`token_hash`),
+  INDEX        `IDX_token_blacklist_expires`    (`expires_at`),
+  INDEX        `IDX_token_blacklist_user_id`    (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Blacklisted JWT tokens and account-level bans';
+
+-- ============================================
 -- End of Schema
 -- ============================================

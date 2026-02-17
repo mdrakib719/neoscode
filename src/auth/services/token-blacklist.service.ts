@@ -1,176 +1,142 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { createClient, RedisClientType } from 'redis';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThan, LessThan } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import * as crypto from 'crypto';
+import { TokenBlacklist } from '../entities/token-blacklist.entity';
 
 @Injectable()
-export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
-  private redisClient: RedisClientType;
+export class TokenBlacklistService {
+  constructor(
+    @InjectRepository(TokenBlacklist)
+    private blacklistRepository: Repository<TokenBlacklist>,
+  ) {}
 
-  constructor(private jwtService: JwtService) {}
-
-  async onModuleInit() {
-    // Create Redis client
-    this.redisClient = createClient({
-      socket: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      },
-      password: process.env.REDIS_PASSWORD || undefined,
-    });
-
-    // Handle errors
-    this.redisClient.on('error', (err) => {
-      console.error('Redis Client Error:', err);
-    });
-
-    // Connect to Redis
-    await this.redisClient.connect();
-    console.log('Redis connected for token blacklist');
-  }
-
-  async onModuleDestroy() {
-    // Disconnect Redis client
-    if (this.redisClient) {
-      await this.redisClient.quit();
-    }
-  }
+  // ─── Internal Helper ───────────────────────────────────────────────────────
 
   /**
-   * Add a token to the blacklist
-   * @param token JWT token to blacklist
-   * @param userId ID of the user who owns the token
-   * @param reason Reason for blacklisting (e.g., 'logout', 'admin_ban')
+   * SHA-256 hash the raw JWT so we never store sensitive token strings.
+   */
+  private hash(value: string): string {
+    return crypto.createHash('sha256').update(value).digest('hex');
+  }
+
+  // ─── Token-Level Blacklist (logout) ────────────────────────────────────────
+
+  /**
+   * Blacklist a specific token on logout.
+   * @param token    Raw JWT string
+   * @param userId   Owner of the token
+   * @param expiresAt When the JWT itself expires (from decoded payload)
+   * @param reason   'logout' | 'admin_revoke' | etc.
    */
   async blacklistToken(
     token: string,
     userId: number,
-    reason: string,
+    expiresAt: Date,
+    reason: string = 'logout',
   ): Promise<void> {
-    try {
-      // Decode token to get expiration
-      const decoded = this.jwtService.decode(token) as any;
-      if (!decoded || !decoded.exp) {
-        throw new Error('Invalid token or missing expiration');
-      }
+    const tokenHash = this.hash(token);
 
-      // Calculate TTL (time until token expires)
-      const now = Math.floor(Date.now() / 1000);
-      const ttl = decoded.exp - now;
+    const existing = await this.blacklistRepository.findOne({
+      where: { token_hash: tokenHash },
+    });
+    if (existing) return; // already blacklisted
 
-      if (ttl <= 0) {
-        // Token already expired, no need to blacklist
-        return;
-      }
-
-      // Store token in Redis with TTL
-      const key = `token_blacklist:${this.hashToken(token)}`;
-      const value = JSON.stringify({
-        userId,
-        reason,
-        blacklistedAt: new Date().toISOString(),
-        expiresAt: new Date(decoded.exp * 1000).toISOString(),
-      });
-
-      await this.redisClient.setEx(key, ttl, value);
-    } catch (error) {
-      console.error('Error blacklisting token:', error);
-      throw error;
-    }
+    const entry = this.blacklistRepository.create({
+      token_hash: tokenHash,
+      user_id: userId,
+      type: 'logout',
+      reason,
+      expires_at: expiresAt,
+    });
+    await this.blacklistRepository.save(entry);
   }
 
   /**
-   * Check if a token is blacklisted
-   * @param token JWT token to check
-   * @returns true if blacklisted, false otherwise
+   * Check if a specific token has been blacklisted (e.g. after logout).
    */
   async isTokenBlacklisted(token: string): Promise<boolean> {
-    try {
-      const key = `token_blacklist:${this.hashToken(token)}`;
-      const exists = await this.redisClient.exists(key);
-      return exists === 1;
-    } catch (error) {
-      console.error('Error checking token blacklist:', error);
-      // If Redis is down, deny access for security
-      return true;
-    }
+    const tokenHash = this.hash(token);
+    const entry = await this.blacklistRepository.findOne({
+      where: {
+        token_hash: tokenHash,
+        expires_at: MoreThan(new Date()),
+      },
+    });
+    return !!entry;
   }
 
+  // ─── User-Level Ban (admin lock / deactivate) ───────────────────────────────
+
   /**
-   * Blacklist all tokens for a user (used when user is banned)
-   * Creates a user-level ban that applies to all their tokens
-   * @param userId ID of the user to ban
+   * Ban ALL tokens for a user immediately.
+   * Called by admin when locking or deactivating an account.
+   * Stores a single 'user_ban:<userId>' row — any token belonging
+   * to this user is rejected in the JWT strategy.
    */
   async blacklistAllUserTokens(userId: number): Promise<void> {
-    try {
-      const key = `user_ban:${userId}`;
-      const value = JSON.stringify({
-        bannedAt: new Date().toISOString(),
-        reason: 'account_deactivated',
-      });
+    const banKey = `user_ban:${userId}`;
+    const banHash = this.hash(banKey);
 
-      // Set with 7 days TTL (tokens typically expire before this)
-      const sevenDays = 7 * 24 * 60 * 60;
-      await this.redisClient.setEx(key, sevenDays, value);
-    } catch (error) {
-      console.error('Error blacklisting user tokens:', error);
-      throw error;
+    const existing = await this.blacklistRepository.findOne({
+      where: { token_hash: banHash },
+    });
+
+    // 30 days — well past any JWT's natural expiry
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    if (existing) {
+      // Refresh expiry if already banned
+      existing.expires_at = expiresAt;
+      await this.blacklistRepository.save(existing);
+    } else {
+      const entry = this.blacklistRepository.create({
+        token_hash: banHash,
+        user_id: userId,
+        type: 'user_ban',
+        reason: 'account_locked_or_deactivated',
+        expires_at: expiresAt,
+      });
+      await this.blacklistRepository.save(entry);
     }
   }
 
   /**
-   * Check if a user is banned (all their tokens are invalid)
-   * @param userId ID of the user to check
-   * @returns true if user is banned, false otherwise
+   * Check if a user has an active account-level ban.
    */
   async isUserBanned(userId: number): Promise<boolean> {
-    try {
-      const key = `user_ban:${userId}`;
-      const exists = await this.redisClient.exists(key);
-      return exists === 1;
-    } catch (error) {
-      console.error('Error checking user ban:', error);
-      // If Redis is down, allow access (fail open for user ban, but not for token blacklist)
-      return false;
-    }
+    const banHash = this.hash(`user_ban:${userId}`);
+    const entry = await this.blacklistRepository.findOne({
+      where: {
+        token_hash: banHash,
+        type: 'user_ban',
+        expires_at: MoreThan(new Date()),
+      },
+    });
+    return !!entry;
   }
 
   /**
-   * Remove user from ban list (used when account is reactivated)
-   * @param userId ID of the user to unban
+   * Remove the account-level ban — called when admin unlocks a user.
+   * This restores existing sessions immediately.
    */
   async unbanUser(userId: number): Promise<void> {
-    try {
-      const key = `user_ban:${userId}`;
-      await this.redisClient.del(key);
-    } catch (error) {
-      console.error('Error unbanning user:', error);
-      throw error;
-    }
+    const banHash = this.hash(`user_ban:${userId}`);
+    await this.blacklistRepository.delete({ token_hash: banHash });
   }
 
-  /**
-   * Get blacklist information for a token
-   * @param token JWT token to check
-   * @returns blacklist info or null if not blacklisted
-   */
-  async getBlacklistInfo(token: string): Promise<any> {
-    try {
-      const key = `token_blacklist:${this.hashToken(token)}`;
-      const value = await this.redisClient.get(key);
-      return value ? JSON.parse(value as string) : null;
-    } catch (error) {
-      console.error('Error getting blacklist info:', error);
-      return null;
-    }
-  }
+  // ─── Cleanup ────────────────────────────────────────────────────────────────
 
   /**
-   * Hash a token to use as Redis key
-   * @param token Token to hash
-   * @returns SHA-256 hash of the token
+   * Remove expired rows every day at midnight.
+   * Keeps the table lean — expired entries are no longer useful.
    */
-  private hashToken(token: string): string {
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(token).digest('hex');
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async cleanupExpiredEntries(): Promise<void> {
+    await this.blacklistRepository.delete({
+      expires_at: LessThan(new Date()),
+    });
+    console.log('[TokenBlacklist] Cleaned up expired entries');
   }
 }

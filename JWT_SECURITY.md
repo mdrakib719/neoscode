@@ -211,7 +211,7 @@ CacheModule.registerAsync({
     }),
     ttl: 24 * 60 * 60, // 24 hours in seconds
   }),
-})
+});
 ```
 
 ### 4. Logout Endpoint
@@ -230,11 +230,11 @@ CacheModule.registerAsync({
 async logout(@Req() req) {
   const token = req.headers.authorization?.split(' ')[1];
   const userId = req.user.id;
-  
+
   if (token) {
     await this.authService.logout(token, userId);
   }
-  
+
   return { message: 'Logged out successfully' };
 }
 ```
@@ -320,7 +320,7 @@ async logout(): Promise<void> {
 Automatically includes JWT token in Authorization header:
 
 ```typescript
-Authorization: `Bearer ${token}`
+Authorization: `Bearer ${token}`;
 ```
 
 ## Security Best Practices
@@ -417,6 +417,7 @@ redis-cli GET "token_blacklist:HASH"
 ### Issue: Tokens not being blacklisted
 
 **Check:**
+
 1. Redis is running: `redis-cli ping`
 2. Environment variables are set correctly
 3. TokenBlacklistService is injected properly
@@ -429,6 +430,7 @@ redis-cli -h localhost -p 6379 ping
 ### Issue: Logout doesn't invalidate token
 
 **Check:**
+
 1. Frontend is calling `/auth/logout` endpoint
 2. Token is being sent in Authorization header
 3. Redis keys are being created: `redis-cli KEYS "*"`
@@ -436,6 +438,7 @@ redis-cli -h localhost -p 6379 ping
 ### Issue: Performance degradation
 
 **Monitor:**
+
 ```bash
 # Check Redis stats
 redis-cli INFO stats
@@ -454,6 +457,7 @@ redis-cli CLIENT LIST
 If migrating from simple JWT without blacklist:
 
 1. **Install Dependencies:**
+
    ```bash
    npm install redis @nestjs/cache-manager cache-manager cache-manager-redis-yet
    ```

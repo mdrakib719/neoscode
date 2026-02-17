@@ -244,8 +244,21 @@ export class AuthService {
    * @param userId - ID of the user logging out
    */
   async logout(token: string, userId: number): Promise<{ message: string }> {
-    await this.tokenBlacklistService.blacklistToken(token, userId, 'logout');
-    
+    if (token) {
+      // Decode to get the expiry so the DB row has the right TTL
+      const decoded = this.jwtService.decode(token) as any;
+      const expiresAt = decoded?.exp
+        ? new Date(decoded.exp * 1000)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000); // fallback: 24h
+
+      await this.tokenBlacklistService.blacklistToken(
+        token,
+        userId,
+        expiresAt,
+        'logout',
+      );
+    }
+
     return {
       message: 'Logged out successfully',
     };
@@ -267,4 +280,3 @@ export class AuthService {
     return this.tokenBlacklistService.isTokenBlacklisted(token);
   }
 }
-

@@ -253,6 +253,15 @@
   background: #000000;
 }
 
+.btn-small.btn-success {
+  background: #2d6a2d;
+  border-color: #2d6a2d;
+}
+
+.btn-small.btn-success:hover {
+  background: #3a8a3a;
+}
+
 .btn-small:disabled {
   background: #e0e0e0;
   color: #999999;

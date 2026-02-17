@@ -24,6 +24,7 @@ export const AdminPanel = () => {
     createEmployee,
     activateUser,
     lockUser,
+    unlockUser,
     freezeAccount,
     closeAccount,
     reverseTransaction,
@@ -229,16 +230,30 @@ export const AdminPanel = () => {
     }
   };
 
-  const handleLockUser = async (userId: number, isLocked: boolean) => {
-    const reason = prompt('Enter reason for locking:');
-    if (!reason && isLocked) return;
+  const handleLockUser = async (userId: number) => {
+    const reason = prompt('Enter reason for locking this user:');
+    if (!reason) return;
 
     try {
-      await lockUser(userId, isLocked, reason || undefined);
-      getAllUsers();
-      alert(`User ${isLocked ? 'locked' : 'unlocked'} successfully!`);
+      await lockUser(userId, true, reason);
+      await getAllUsers();
+      alert('User locked successfully!');
     } catch (error) {
       alert('Failed to lock user');
+    }
+  };
+
+  const handleUnlockUser = async (userId: number) => {
+    const reason =
+      prompt('Enter reason for unlocking (optional):') || 'Unlocked by admin';
+    if (reason === null) return; // cancelled
+
+    try {
+      await unlockUser(userId, reason);
+      await getAllUsers();
+      alert('User unlocked successfully! Active sessions restored.');
+    } catch (error) {
+      alert('Failed to unlock user');
     }
   };
 
@@ -473,16 +488,25 @@ export const AdminPanel = () => {
                         >
                           {user.isActive ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleLockUser(user.id, !user.isLocked)
-                          }
-                          className="btn-small btn-warning"
-                          disabled={loading}
-                        >
-                          {user.isLocked ? 'Unlock' : 'Lock'}
-                        </button>
+                        {user.isLocked ? (
+                          <button
+                            type="button"
+                            onClick={() => handleUnlockUser(user.id)}
+                            className="btn-small btn-success"
+                            disabled={loading}
+                          >
+                            🔓 Unlock
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleLockUser(user.id)}
+                            className="btn-small btn-warning"
+                            disabled={loading}
+                          >
+                            🔒 Lock
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

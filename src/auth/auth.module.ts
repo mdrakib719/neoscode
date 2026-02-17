@@ -9,10 +9,11 @@ import { User } from '@/users/entities/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TokenBlacklistService } from './services/token-blacklist.service';
+import { TokenBlacklist } from './entities/token-blacklist.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, TokenBlacklist]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

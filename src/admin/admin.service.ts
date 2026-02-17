@@ -18,6 +18,7 @@ import {
   CreateEmployeeDto,
   ActivateUserDto,
   LockAccountDto,
+  UnlockUserDto,
   AssignRoleDto,
   ResetPasswordDto,
   FreezeAccountDto,
@@ -123,6 +124,53 @@ export class AdminService {
     };
   }
 
+  async unlockUser(userId: number, dto: UnlockUserDto, adminId: number) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.isLocked) {
+      return {
+        message: 'User account is already unlocked',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          isLocked: user.isLocked,
+        },
+      };
+    }
+
+    user.isLocked = false;
+    user.locked_at = null;
+    user.lock_reason = null;
+    const savedUser = await this.userRepository.save(user);
+
+    // Remove the user from the token ban list so existing sessions become valid again
+    await this.tokenBlacklistService.unbanUser(userId);
+
+    await this.logAudit(
+      adminId,
+      'UNLOCK_USER',
+      'user',
+      userId,
+      dto.reason || 'Account unlocked by admin',
+    );
+
+    return {
+      message: 'User account unlocked successfully. Active sessions restored.',
+      user: {
+        id: savedUser.id,
+        name: savedUser.name,
+        email: savedUser.email,
+        isLocked: savedUser.isLocked,
+        locked_at: savedUser.locked_at,
+        lock_reason: savedUser.lock_reason,
+      },
+    };
+  }
+
   async assignRole(userId: number, dto: AssignRoleDto, adminId: number) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -183,8 +231,19 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    user['isLocked'] = dto.isLocked;
-    await this.userRepository.save(user);
+    user.isLocked = dto.isLocked;
+    user.locked_at = dto.isLocked ? new Date() : null;
+    user.lock_reason = dto.isLocked ? dto.reason || 'Locked by admin' : null;
+
+    const savedUser = await this.userRepository.save(user);
+
+    // If locking user, blacklist all their tokens
+    if (dto.isLocked) {
+      await this.tokenBlacklistService.blacklistAllUserTokens(userId);
+    } else {
+      // If unlocking, remove from ban list
+      await this.tokenBlacklistService.unbanUser(userId);
+    }
 
     await this.logAudit(
       adminId,
@@ -197,10 +256,10 @@ export class AdminService {
     return {
       message: `User ${dto.isLocked ? 'locked' : 'unlocked'} successfully`,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isLocked: dto.isLocked,
+        id: savedUser.id,
+        name: savedUser.name,
+        email: savedUser.email,
+        isLocked: savedUser.isLocked,
       },
     };
   }

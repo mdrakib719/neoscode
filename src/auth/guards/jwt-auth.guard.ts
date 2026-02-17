@@ -1,4 +1,8 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TokenBlacklistService } from '../services/token-blacklist.service';
 
@@ -11,7 +15,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // First, run the standard JWT validation
     const isValid = await super.canActivate(context);
-    
+
     if (!isValid) {
       return false;
     }
@@ -25,8 +29,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     // Check if token is blacklisted
-    const isBlacklisted = await this.tokenBlacklistService.isTokenBlacklisted(token);
-    
+    const isBlacklisted =
+      await this.tokenBlacklistService.isTokenBlacklisted(token);
+
     if (isBlacklisted) {
       throw new UnauthorizedException('Token has been revoked');
     }
@@ -34,8 +39,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // Check if user is banned
     const user = request.user;
     if (user && user.userId) {
-      const isBanned = await this.tokenBlacklistService.isUserBanned(user.userId);
-      
+      const isBanned = await this.tokenBlacklistService.isUserBanned(
+        user.userId,
+      );
+
       if (isBanned) {
         throw new UnauthorizedException('User account has been banned');
       }

@@ -20,6 +20,7 @@ import {
   CreateEmployeeDto,
   ActivateUserDto,
   LockAccountDto,
+  UnlockUserDto,
   AssignRoleDto,
   ResetPasswordDto,
   FreezeAccountDto,
@@ -99,6 +100,18 @@ export class AdminController {
     @GetUser('userId') adminId: number,
   ) {
     return this.adminService.lockUser(+userId, dto, adminId);
+  }
+
+  /**
+   * Unlock a locked user account and restore their sessions
+   */
+  @Put('users/:id/unlock')
+  unlockUser(
+    @Param('id') userId: string,
+    @Body() dto: UnlockUserDto,
+    @GetUser('userId') adminId: number,
+  ) {
+    return this.adminService.unlockUser(+userId, dto, adminId);
   }
 
   // ==================== ACCOUNT OVERSIGHT ====================
