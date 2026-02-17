@@ -48,18 +48,16 @@ export const useTransactionStore = create<TransactionState>((set) => ({
   deposit: async (accountId, amount, description) => {
     set({ isLoading: true, error: null });
     try {
-      const newTransaction = await transactionService.deposit({
+      // Create deposit request instead of direct deposit
+      await transactionService.createDepositRequest({
         accountId,
         amount,
         description,
       });
-      set((state) => ({
-        transactions: [newTransaction, ...state.transactions],
-        isLoading: false,
-      }));
+      set({ isLoading: false });
     } catch (error: any) {
       set({
-        error: error.response?.data?.message || 'Deposit failed',
+        error: error.response?.data?.message || 'Deposit request failed',
         isLoading: false,
       });
       throw error;

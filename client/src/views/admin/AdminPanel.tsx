@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminStore } from '../../controllers/admin.controller';
 import { useAuthStore } from '../../controllers/auth.controller';
+import { useLoanStore } from '../../controllers/loan.controller';
 import { useNavigate } from 'react-router-dom';
 import './AdminPanel.css';
 
@@ -30,6 +31,18 @@ export const AdminPanel = () => {
     setFeeConfiguration,
     setInterestRate,
   } = useAdminStore();
+
+  const {
+    loans,
+    isLoading: loansLoading,
+    error: loansError,
+    fetchLoans,
+    approveLoan,
+    rejectLoan,
+  } = useLoanStore();
+
+  const [depositRequests, setDepositRequests] = useState<any[]>([]);
+  const [depositRequestsLoading, setDepositRequestsLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState('users');
   const [showCreateEmployee, setShowCreateEmployee] = useState(false);
@@ -69,6 +82,8 @@ export const AdminPanel = () => {
     getAllUsers();
     getAllAccounts();
     getSystemConfig();
+    fetchLoans();
+    loadDepositRequests();
   }, [user]);
 
   useEffect(() => {
@@ -78,6 +93,12 @@ export const AdminPanel = () => {
     } else if (activeTab === 'audit') {
       console.log('Fetching audit logs...');
       getAuditLogs();
+    } else if (activeTab === 'loans') {
+      console.log('Fetching loans...');
+      fetchLoans();
+    } else if (activeTab === 'deposits') {
+      console.log('Fetching deposit requests...');
+      loadDepositRequests();
     }
   }, [activeTab]);
 
@@ -93,7 +114,92 @@ export const AdminPanel = () => {
       error,
     });
   }, [users, accounts, transactions, auditLogs, systemConfig, loading, error]);
+  const loadDepositRequests = async () => {
+    try {
+      setDepositRequestsLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        'http://localhost:3001/api/transactions/deposit-requests',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      if (!response.ok) throw new Error('Failed to fetch deposit requests');
+      const data = await response.json();
+      setDepositRequests(data);
+    } catch (error) {
+      console.error('Failed to load deposit requests:', error);
+    } finally {
+      setDepositRequestsLoading(false);
+    }
+  };
 
+  const handleApproveDepositRequest = async (requestId: number) => {
+    const remarks = prompt('Enter approval remarks (optional):');
+    if (
+      !confirm(
+        "Are you sure you want to approve this deposit request? The amount will be credited to the user's account.",
+      )
+    )
+      return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `http://localhost:3001/api/transactions/deposit-requests/${requestId}/approve`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ remarks: remarks || undefined }),
+        },
+      );
+
+      if (!response.ok) throw new Error('Failed to approve deposit request');
+
+      alert(
+        'Deposit request approved successfully! Amount credited to user account.',
+      );
+      loadDepositRequests();
+      getAllAccounts(); // Refresh accounts to show updated balances
+    } catch (error: any) {
+      alert(error.message || 'Failed to approve deposit request');
+    }
+  };
+
+  const handleRejectDepositRequest = async (requestId: number) => {
+    const remarks = prompt('Enter reason for rejection:');
+    if (!remarks) return;
+
+    if (!confirm('Are you sure you want to reject this deposit request?'))
+      return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `http://localhost:3001/api/transactions/deposit-requests/${requestId}/reject`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ remarks }),
+        },
+      );
+
+      if (!response.ok) throw new Error('Failed to reject deposit request');
+
+      alert('Deposit request rejected successfully!');
+      loadDepositRequests();
+    } catch (error: any) {
+      alert(error.message || 'Failed to reject deposit request');
+    }
+  };
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -213,6 +319,39 @@ export const AdminPanel = () => {
     }
   };
 
+  const handleApproveLoan = async (loanId: number) => {
+    const remarks = prompt('Enter approval remarks (optional):');
+    if (
+      !confirm(
+        "Are you sure you want to approve this loan? The amount will be credited to the user's account.",
+      )
+    )
+      return;
+
+    try {
+      await approveLoan(loanId, remarks || undefined);
+      fetchLoans();
+      alert('Loan approved successfully! Amount credited to user account.');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to approve loan');
+    }
+  };
+
+  const handleRejectLoan = async (loanId: number) => {
+    const remarks = prompt('Enter reason for rejection:');
+    if (!remarks) return;
+
+    if (!confirm('Are you sure you want to reject this loan?')) return;
+
+    try {
+      await rejectLoan(loanId, remarks);
+      fetchLoans();
+      alert('Loan rejected successfully!');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to reject loan');
+    }
+  };
+
   if (user?.role !== 'ADMIN') {
     return (
       <div className="admin-panel">
@@ -239,6 +378,18 @@ export const AdminPanel = () => {
           onClick={() => setActiveTab('accounts')}
         >
           🏦 Accounts Oversight
+        </button>
+        <button
+          className={activeTab === 'deposits' ? 'active' : ''}
+          onClick={() => setActiveTab('deposits')}
+        >
+          💵 Deposit Requests
+        </button>
+        <button
+          className={activeTab === 'loans' ? 'active' : ''}
+          onClick={() => setActiveTab('loans')}
+        >
+          💰 Loan Management
         </button>
         <button
           className={activeTab === 'transactions' ? 'active' : ''}
@@ -445,6 +596,199 @@ export const AdminPanel = () => {
                           >
                             Reverse
                           </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* DEPOSIT REQUESTS TAB */}
+        {activeTab === 'deposits' && (
+          <div className="deposits-section">
+            <h2>Deposit Requests Management</h2>
+
+            {depositRequestsLoading ? (
+              <p>Loading deposit requests...</p>
+            ) : depositRequests.length === 0 ? (
+              <p>No deposit requests found.</p>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Account</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Requested On</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {depositRequests.map((request: any) => (
+                    <tr key={request.id}>
+                      <td>{request.id}</td>
+                      <td>
+                        {request.user?.name || `User #${request.user_id}`}
+                      </td>
+                      <td>
+                        {request.account?.account_number ||
+                          `Acc #${request.account_id}`}
+                      </td>
+                      <td>${parseFloat(request.amount).toLocaleString()}</td>
+                      <td>{request.description || '-'}</td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            request.status === 'PENDING'
+                              ? 'badge-warning'
+                              : request.status === 'COMPLETED'
+                                ? 'badge-success'
+                                : 'badge-danger'
+                          }`}
+                        >
+                          {request.status}
+                        </span>
+                      </td>
+                      <td>
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </td>
+                      <td>
+                        {request.status === 'PENDING' && (
+                          <>
+                            <button
+                              onClick={() =>
+                                handleApproveDepositRequest(request.id)
+                              }
+                              className="btn-small btn-success"
+                              disabled={depositRequestsLoading}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleRejectDepositRequest(request.id)
+                              }
+                              className="btn-small btn-danger"
+                              disabled={depositRequestsLoading}
+                              style={{ marginLeft: '5px' }}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {request.status === 'COMPLETED' &&
+                          request.admin_remarks && (
+                            <span
+                              className="text-muted"
+                              title={request.admin_remarks}
+                            >
+                              ✓ {request.admin_remarks.substring(0, 20)}...
+                            </span>
+                          )}
+                        {request.status === 'FAILED' &&
+                          request.admin_remarks && (
+                            <span
+                              className="text-danger"
+                              title={request.admin_remarks}
+                            >
+                              ✗ {request.admin_remarks.substring(0, 20)}...
+                            </span>
+                          )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* LOAN MANAGEMENT TAB */}
+        {activeTab === 'loans' && (
+          <div className="loans-section">
+            <h2>Loan Management</h2>
+
+            {loansLoading ? (
+              <p>Loading loans...</p>
+            ) : loansError ? (
+              <p className="error-message">{loansError}</p>
+            ) : loans.length === 0 ? (
+              <p>No loan applications found.</p>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Loan Type</th>
+                    <th>Amount</th>
+                    <th>Interest Rate</th>
+                    <th>Tenure</th>
+                    <th>EMI</th>
+                    <th>Status</th>
+                    <th>Applied On</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loans.map((loan: any) => (
+                    <tr key={loan.id}>
+                      <td>{loan.id}</td>
+                      <td>{loan.user?.name || `User #${loan.user_id}`}</td>
+                      <td>{loan.loan_type}</td>
+                      <td>${parseFloat(loan.amount).toLocaleString()}</td>
+                      <td>{loan.interest_rate}%</td>
+                      <td>{loan.tenure_months} months</td>
+                      <td>${parseFloat(loan.emi_amount).toFixed(2)}</td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            loan.status === 'PENDING'
+                              ? 'badge-warning'
+                              : loan.status === 'APPROVED'
+                                ? 'badge-success'
+                                : loan.status === 'REJECTED'
+                                  ? 'badge-danger'
+                                  : 'badge-info'
+                          }`}
+                        >
+                          {loan.status}
+                        </span>
+                      </td>
+                      <td>{new Date(loan.created_at).toLocaleDateString()}</td>
+                      <td>
+                        {loan.status === 'PENDING' && (
+                          <>
+                            <button
+                              onClick={() => handleApproveLoan(loan.id)}
+                              className="btn-small btn-success"
+                              disabled={loansLoading}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectLoan(loan.id)}
+                              className="btn-small btn-danger"
+                              disabled={loansLoading}
+                              style={{ marginLeft: '5px' }}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {loan.status === 'APPROVED' && (
+                          <span className="text-muted">
+                            Paid {loan.paid_installments}/{loan.tenure_months}
+                          </span>
+                        )}
+                        {loan.status === 'REJECTED' && (
+                          <span className="text-muted">-</span>
                         )}
                       </td>
                     </tr>

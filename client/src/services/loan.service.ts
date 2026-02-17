@@ -16,18 +16,29 @@ export const loanService = {
   },
 
   async approve(id: number, remarks?: string): Promise<Loan> {
-    return apiClient.post<Loan>(API_ENDPOINTS.LOAN_APPROVE(id), { remarks });
+    return apiClient.put<Loan>(API_ENDPOINTS.LOAN_APPROVE(id), { remarks });
   },
 
   async reject(id: number, remarks: string): Promise<Loan> {
-    return apiClient.post<Loan>(API_ENDPOINTS.LOAN_REJECT(id), { remarks });
+    return apiClient.put<Loan>(API_ENDPOINTS.LOAN_REJECT(id), { remarks });
   },
 
   async getRepaymentSchedule(id: number): Promise<any[]> {
     return apiClient.get<any[]>(API_ENDPOINTS.LOAN_SCHEDULE(id));
   },
 
-  async payEMI(loanId: number): Promise<any> {
-    return apiClient.post<any>(API_ENDPOINTS.LOAN_PAY_EMI(loanId), {});
+  async getNextEMIDetails(loanId: number): Promise<any> {
+    return apiClient.get<any>(API_ENDPOINTS.LOAN_NEXT_EMI(loanId));
+  },
+
+  async payEMI(
+    loanId: number,
+    accountId: number,
+    amount?: number,
+  ): Promise<any> {
+    return apiClient.post<any>(API_ENDPOINTS.LOAN_PAY_EMI(loanId), {
+      account_id: accountId,
+      amount,
+    });
   },
 };

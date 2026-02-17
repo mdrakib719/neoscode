@@ -35,7 +35,12 @@ export class ApproveLoanDto {
 export class PayEMIDto {
   @IsNumber()
   @IsPositive()
-  amount: number;
+  @IsOptional()
+  amount?: number;
+
+  @IsNumber()
+  @IsPositive()
+  account_id: number;
 
   @IsInt()
   @IsOptional()

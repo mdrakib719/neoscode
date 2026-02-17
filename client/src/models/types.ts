@@ -46,6 +46,23 @@ export interface Transaction {
   to_account?: Account;
 }
 
+export interface DepositRequestModel {
+  id: number;
+  user_id: number;
+  account_id: number;
+  amount: number;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  description?: string;
+  admin_remarks?: string;
+  approved_by?: number;
+  processed_at?: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  account?: Account;
+  admin?: User;
+}
+
 export interface Loan {
   id: number;
   user_id: number;
@@ -61,6 +78,23 @@ export interface Loan {
   user?: User;
   created_at: string;
   updated_at: string;
+}
+
+export interface NextEMIDetails {
+  loan_id: number;
+  installment_number: number;
+  total_installments: number;
+  emi_amount: number;
+  principal_amount: number;
+  interest_amount: number;
+  penalty_amount: number;
+  total_amount_due: number;
+  due_date: string;
+  days_overdue: number;
+  is_overdue: boolean;
+  remaining_balance: number;
+  loan_fully_paid: boolean;
+  message?: string;
 }
 
 export interface Beneficiary {

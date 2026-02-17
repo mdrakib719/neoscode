@@ -7,9 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { Beneficiary } from './entities/beneficiary.entity';
+import { DepositRequest } from './entities/deposit-request.entity';
 import { Account } from '@/accounts/entities/account.entity';
 import { DepositDto, WithdrawDto, TransferDto } from './dto/transaction.dto';
 import { AddBeneficiaryDto, UpdateBeneficiaryDto } from './dto/beneficiary.dto';
+import {
+  CreateDepositRequestDto,
+  ApproveDepositRequestDto,
+  RejectDepositRequestDto,
+} from './dto/deposit-request.dto';
 import { TransactionType, TransactionStatus } from '@/common/enums';
 
 @Injectable()
@@ -19,52 +25,153 @@ export class TransactionsService {
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(Beneficiary)
     private beneficiaryRepository: Repository<Beneficiary>,
+    @InjectRepository(DepositRequest)
+    private depositRequestRepository: Repository<DepositRequest>,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     private dataSource: DataSource,
   ) {}
 
+  // Old direct deposit method - now disabled for users
+  // Admin will use approveDepositRequest instead
   async deposit(depositDto: DepositDto, userId: number): Promise<Transaction> {
+    throw new BadRequestException(
+      'Direct deposits are not allowed. Please create a deposit request for admin approval.',
+    );
+  }
+
+  // Create deposit request (users can only request, not directly deposit)
+  async createDepositRequest(
+    createDepositRequestDto: CreateDepositRequestDto,
+    userId: number,
+  ): Promise<DepositRequest> {
+    // Find account
+    const account = await this.accountRepository.findOne({
+      where: { id: createDepositRequestDto.accountId, user_id: userId },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    // Create deposit request
+    const depositRequest = this.depositRequestRepository.create({
+      user_id: userId,
+      account_id: createDepositRequestDto.accountId,
+      amount: createDepositRequestDto.amount,
+      description: createDepositRequestDto.description || 'Deposit request',
+      status: TransactionStatus.PENDING,
+    });
+
+    return this.depositRequestRepository.save(depositRequest);
+  }
+
+  // Get all deposit requests (admin view)
+  async getAllDepositRequests(): Promise<DepositRequest[]> {
+    return this.depositRequestRepository.find({
+      relations: ['user', 'account', 'admin'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // Get user's deposit requests
+  async getUserDepositRequests(userId: number): Promise<DepositRequest[]> {
+    return this.depositRequestRepository.find({
+      where: { user_id: userId },
+      relations: ['account', 'admin'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // Approve deposit request (admin only)
+  async approveDepositRequest(
+    requestId: number,
+    adminId: number,
+    approveDto: ApproveDepositRequestDto,
+  ): Promise<DepositRequest> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // Find account
-      const account = await queryRunner.manager.findOne(Account, {
-        where: { id: depositDto.accountId, user_id: userId },
+      // Find deposit request
+      const depositRequest = await queryRunner.manager.findOne(DepositRequest, {
+        where: { id: requestId },
+        relations: ['account', 'user'],
       });
 
-      if (!account) {
-        throw new NotFoundException('Account not found');
+      if (!depositRequest) {
+        throw new NotFoundException('Deposit request not found');
       }
 
-      // Update balance
-      account.balance = Number(account.balance) + depositDto.amount;
+      if (depositRequest.status !== TransactionStatus.PENDING) {
+        throw new BadRequestException(
+          'Deposit request has already been processed',
+        );
+      }
+
+      // Update account balance
+      const account = depositRequest.account;
+      account.balance = Number(account.balance) + Number(depositRequest.amount);
       await queryRunner.manager.save(Account, account);
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
-        to_account_id: depositDto.accountId,
-        amount: depositDto.amount,
+        to_account_id: depositRequest.account_id,
+        amount: depositRequest.amount,
         type: TransactionType.DEPOSIT,
         status: TransactionStatus.COMPLETED,
-        description: depositDto.description || 'Deposit',
+        description: depositRequest.description || 'Deposit - Admin Approved',
       });
+      await queryRunner.manager.save(Transaction, transaction);
 
-      const savedTransaction = await queryRunner.manager.save(
-        Transaction,
-        transaction,
+      // Update deposit request
+      depositRequest.status = TransactionStatus.COMPLETED;
+      depositRequest.approved_by = adminId;
+      depositRequest.admin_remarks = approveDto.remarks || 'Approved';
+      depositRequest.processed_at = new Date();
+      const updatedRequest = await queryRunner.manager.save(
+        DepositRequest,
+        depositRequest,
       );
 
       await queryRunner.commitTransaction();
-      return savedTransaction;
+      return updatedRequest;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // Reject deposit request (admin only)
+  async rejectDepositRequest(
+    requestId: number,
+    adminId: number,
+    rejectDto: RejectDepositRequestDto,
+  ): Promise<DepositRequest> {
+    const depositRequest = await this.depositRequestRepository.findOne({
+      where: { id: requestId },
+      relations: ['user', 'account'],
+    });
+
+    if (!depositRequest) {
+      throw new NotFoundException('Deposit request not found');
+    }
+
+    if (depositRequest.status !== TransactionStatus.PENDING) {
+      throw new BadRequestException(
+        'Deposit request has already been processed',
+      );
+    }
+
+    depositRequest.status = TransactionStatus.FAILED;
+    depositRequest.approved_by = adminId;
+    depositRequest.admin_remarks = rejectDto.remarks;
+    depositRequest.processed_at = new Date();
+
+    return this.depositRequestRepository.save(depositRequest);
   }
 
   async withdraw(

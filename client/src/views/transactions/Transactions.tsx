@@ -98,12 +98,14 @@ export const Transactions: React.FC = () => {
         amount: parseFloat(depositData.amount),
         description: depositData.description,
       });
-      alert('Deposit successful!');
+      alert(
+        'Deposit request submitted successfully! Waiting for admin approval.',
+      );
       setDepositData({ accountId: '', amount: '', description: '' });
       loadAccounts();
       loadTransactions();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Deposit failed');
+      alert(error.response?.data?.message || 'Deposit request failed');
     } finally {
       setLoading(false);
     }
@@ -254,7 +256,21 @@ export const Transactions: React.FC = () => {
       <div className="tab-content">
         {activeTab === 'deposit' && (
           <form onSubmit={handleDeposit} className="transaction-form">
-            <h2>Deposit Money</h2>
+            <h2>Request Deposit</h2>
+            <div
+              className="info-message"
+              style={{
+                padding: '10px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '4px',
+                marginBottom: '15px',
+                color: '#856404',
+              }}
+            >
+              ℹ️ Deposit requests require admin approval. Your request will be
+              reviewed and processed by an administrator.
+            </div>
             <div className="form-group">
               <label>Select Account</label>
               <select
@@ -300,7 +316,7 @@ export const Transactions: React.FC = () => {
               />
             </div>
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Processing...' : 'Deposit'}
+              {loading ? 'Submitting Request...' : 'Submit Deposit Request'}
             </button>
           </form>
         )}
