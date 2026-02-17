@@ -59,7 +59,7 @@ export const Transactions: React.FC = () => {
   const loadTransactions = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/transactions', {
+      const response = await fetch('http://localhost:3001/api/transactions', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -75,7 +75,7 @@ export const Transactions: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        'http://localhost:3001/transactions/beneficiaries',
+        'http://localhost:3001/api/transactions/beneficiaries',
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -161,7 +161,7 @@ export const Transactions: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        'http://localhost:3001/transactions/beneficiaries',
+        'http://localhost:3001/api/transactions/beneficiaries',
         {
           method: 'POST',
           headers: {
@@ -196,7 +196,7 @@ export const Transactions: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3001/transactions/beneficiaries/${id}`,
+        `http://localhost:3001/api/transactions/beneficiaries/${id}`,
         {
           method: 'DELETE',
           headers: {
@@ -268,7 +268,7 @@ export const Transactions: React.FC = () => {
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.account_number} - {acc.account_type} ($
-                    {acc.balance.toFixed(2)})
+                    {parseFloat(String(acc.balance)).toFixed(2)})
                   </option>
                 ))}
               </select>
@@ -324,7 +324,7 @@ export const Transactions: React.FC = () => {
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.account_number} - {acc.account_type} ($
-                    {acc.balance.toFixed(2)})
+                    {parseFloat(String(acc.balance)).toFixed(2)})
                   </option>
                 ))}
               </select>
@@ -380,7 +380,7 @@ export const Transactions: React.FC = () => {
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.account_number} - {acc.account_type} ($
-                    {acc.balance.toFixed(2)})
+                    {parseFloat(String(acc.balance)).toFixed(2)})
                   </option>
                 ))}
               </select>

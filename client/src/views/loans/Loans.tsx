@@ -57,30 +57,13 @@ export const Loans: React.FC = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:3001/loans/${loanId}/pay-emi`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to pay EMI');
-      }
-
-      const result = await response.json();
+      const result = await loanController.payEMI(loanId);
       alert(
         `EMI paid successfully! ${result.penalty_applied ? `Penalty: $${result.penalty_amount}` : ''}`,
       );
       loadLoans();
     } catch (error: any) {
-      alert(error.message || 'Failed to pay EMI');
+      alert(error.response?.data?.message || 'Failed to pay EMI');
     } finally {
       setLoading(false);
     }

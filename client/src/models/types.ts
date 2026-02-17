@@ -119,10 +119,10 @@ export interface TransferRequest {
 }
 
 export interface LoanApplicationRequest {
-  loanType: 'PERSONAL' | 'HOME' | 'VEHICLE' | 'EDUCATION';
+  loan_type: 'PERSONAL' | 'HOME' | 'VEHICLE' | 'EDUCATION';
   amount: number;
-  interestRate: number;
-  tenureMonths: number;
+  interest_rate: number;
+  tenure_months: number;
 }
 
 export interface MonthlyStatement {

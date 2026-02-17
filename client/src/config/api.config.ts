@@ -12,6 +12,8 @@ export const API_ENDPOINTS = {
 
   // Accounts
   ACCOUNTS: '/accounts',
+  ACCOUNTS_FIXED_DEPOSIT: '/accounts/fixed-deposit',
+  ACCOUNTS_RECURRING_DEPOSIT: '/accounts/recurring-deposit',
 
   // Transactions
   TRANSACTIONS: '/transactions',
@@ -25,6 +27,7 @@ export const API_ENDPOINTS = {
   LOAN_APPROVE: (id: number) => `/loans/${id}/approve`,
   LOAN_REJECT: (id: number) => `/loans/${id}/reject`,
   LOAN_SCHEDULE: (id: number) => `/loans/${id}/repayment-schedule`,
+  LOAN_PAY_EMI: (id: number) => `/loans/${id}/pay-emi`,
 
   // Reports
   REPORTS_MONTHLY: '/reports/monthly-statement',

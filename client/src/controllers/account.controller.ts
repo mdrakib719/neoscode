@@ -60,6 +60,34 @@ export const accountController = {
   loadAccounts: () => useAccountStore.getState().fetchAccounts(),
   createAccount: (type: 'SAVINGS' | 'CHECKING') =>
     useAccountStore.getState().createAccount(type),
+  createFixedDeposit: async (
+    amount: number,
+    lockPeriodMonths: number,
+    interestRate?: number,
+  ) => {
+    const newAccount = await accountService.createFixedDeposit(
+      amount,
+      lockPeriodMonths,
+      interestRate,
+    );
+    // Refresh accounts list
+    await useAccountStore.getState().fetchAccounts();
+    return newAccount;
+  },
+  createRecurringDeposit: async (
+    monthlyAmount: number,
+    lockPeriodMonths: number,
+    interestRate?: number,
+  ) => {
+    const newAccount = await accountService.createRecurringDeposit(
+      monthlyAmount,
+      lockPeriodMonths,
+      interestRate,
+    );
+    // Refresh accounts list
+    await useAccountStore.getState().fetchAccounts();
+    return newAccount;
+  },
   getAccounts: () => useAccountStore.getState().accounts,
   selectAccount: (account: Account | null) =>
     useAccountStore.getState().selectAccount(account),

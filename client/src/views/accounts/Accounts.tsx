@@ -43,67 +43,48 @@ export const Accounts: React.FC = () => {
       await accountController.createAccount(accountType);
       setShowCreateForm(false);
       loadAccounts();
-    } catch (error) {
+      alert('Account created successfully!');
+    } catch (error: any) {
       console.error('Failed to create account:', error);
-      alert('Failed to create account');
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to create account';
+      alert(`Failed to create account: ${errorMessage}`);
     }
   };
 
   const handleCreateFD = async () => {
     try {
-      const response = await fetch(
-        'http://localhost:3001/accounts/fixed-deposit',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify({
-            amount: parseFloat(fdData.amount),
-            lock_period_months: parseInt(fdData.lock_period_months),
-          }),
-        },
+      await accountController.createFixedDeposit(
+        parseFloat(fdData.amount),
+        parseInt(fdData.lock_period_months),
       );
-
-      if (!response.ok) throw new Error('Failed to create fixed deposit');
-
       setShowFDForm(false);
       setFdData({ amount: '', lock_period_months: '' });
       loadAccounts();
       alert('Fixed Deposit created successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create FD:', error);
-      alert('Failed to create Fixed Deposit');
+      alert(error.response?.data?.message || 'Failed to create Fixed Deposit');
     }
   };
 
   const handleCreateRD = async () => {
     try {
-      const response = await fetch(
-        'http://localhost:3001/accounts/recurring-deposit',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify({
-            monthly_amount: parseFloat(rdData.monthly_amount),
-            lock_period_months: parseInt(rdData.lock_period_months),
-          }),
-        },
+      await accountController.createRecurringDeposit(
+        parseFloat(rdData.monthly_amount),
+        parseInt(rdData.lock_period_months),
       );
-
-      if (!response.ok) throw new Error('Failed to create recurring deposit');
-
       setShowRDForm(false);
       setRdData({ monthly_amount: '', lock_period_months: '' });
       loadAccounts();
       alert('Recurring Deposit created successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create RD:', error);
-      alert('Failed to create Recurring Deposit');
+      alert(
+        error.response?.data?.message || 'Failed to create Recurring Deposit',
+      );
     }
   };
 

@@ -26,4 +26,8 @@ export const loanService = {
   async getRepaymentSchedule(id: number): Promise<any[]> {
     return apiClient.get<any[]>(API_ENDPOINTS.LOAN_SCHEDULE(id));
   },
+
+  async payEMI(loanId: number): Promise<any> {
+    return apiClient.post<any>(API_ENDPOINTS.LOAN_PAY_EMI(loanId), {});
+  },
 };

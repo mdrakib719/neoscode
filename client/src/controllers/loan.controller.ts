@@ -44,10 +44,10 @@ export const useLoanStore = create<LoanState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const newLoan = await loanService.apply({
-        loanType,
+        loan_type: loanType,
         amount,
-        interestRate,
-        tenureMonths,
+        interest_rate: interestRate,
+        tenure_months: tenureMonths,
       });
       set((state) => ({
         loans: [...state.loans, newLoan],
@@ -128,17 +128,22 @@ export const loanController = {
 
     const interestRate = calculateInterestRate(data.loan_type);
 
-    return useLoanStore
-      .getState()
-      .applyLoan(
-        data.loan_type as 'PERSONAL' | 'HOME' | 'VEHICLE' | 'EDUCATION',
-        data.amount,
-        interestRate,
-        data.tenure_months,
-      );
+    // Use loanService.apply directly which sends the correct snake_case format
+    return loanService.apply({
+      loan_type: data.loan_type as
+        | 'PERSONAL'
+        | 'HOME'
+        | 'VEHICLE'
+        | 'EDUCATION',
+      amount: data.amount,
+      interest_rate: interestRate,
+      tenure_months: data.tenure_months,
+    });
   },
 
   getLoans: () => useLoanStore.getState().loans,
 
   selectLoan: (loan: Loan | null) => useLoanStore.getState().selectLoan(loan),
+
+  payEMI: (loanId: number) => loanService.payEMI(loanId),
 };
