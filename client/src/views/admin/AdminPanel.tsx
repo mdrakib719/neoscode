@@ -65,6 +65,7 @@ export const AdminPanel = () => {
       return;
     }
 
+    console.log('Admin Panel: Fetching initial data...');
     getAllUsers();
     getAllAccounts();
     getSystemConfig();
@@ -72,11 +73,26 @@ export const AdminPanel = () => {
 
   useEffect(() => {
     if (activeTab === 'transactions') {
+      console.log('Fetching transactions...');
       getAllTransactions();
     } else if (activeTab === 'audit') {
+      console.log('Fetching audit logs...');
       getAuditLogs();
     }
   }, [activeTab]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Admin Panel State:', {
+      users: users.length,
+      accounts: accounts.length,
+      transactions: transactions.length,
+      auditLogs: auditLogs.length,
+      systemConfig: systemConfig ? Object.keys(systemConfig).length : 0,
+      loading,
+      error,
+    });
+  }, [users, accounts, transactions, auditLogs, systemConfig, loading, error]);
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();

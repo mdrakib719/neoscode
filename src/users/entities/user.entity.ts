@@ -33,6 +33,18 @@ export class User {
   })
   role: UserRole;
 
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Column({ default: false })
+  isLocked: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  locked_at: Date;
+
+  @Column({ type: 'text', nullable: true })
+  lock_reason: string;
+
   @OneToMany(() => Account, (account) => account.user)
   accounts: Account[];
 

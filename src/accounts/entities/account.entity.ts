@@ -33,6 +33,33 @@ export class Account {
   @Column({ default: 'USD' })
   currency: string;
 
+  @Column({ default: false })
+  isFrozen: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  frozen_at: Date;
+
+  @Column({ type: 'text', nullable: true })
+  freeze_reason: string;
+
+  @Column({ default: 'ACTIVE' })
+  status: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  closedAt: Date;
+
+  @Column({ type: 'text', nullable: true })
+  closeReason: string;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  dailyWithdrawalLimit: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  dailyTransferLimit: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  monthlyWithdrawalLimit: number;
+
   @Column()
   user_id: number;
 
