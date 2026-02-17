@@ -8,6 +8,8 @@ export enum AccountType {
   SAVINGS = 'SAVINGS',
   CHECKING = 'CHECKING',
   LOAN = 'LOAN',
+  FIXED_DEPOSIT = 'FIXED_DEPOSIT',
+  RECURRING_DEPOSIT = 'RECURRING_DEPOSIT',
 }
 
 export enum TransactionType {

@@ -21,7 +21,10 @@ export const Dashboard: React.FC = () => {
     fetchLoans();
   }, []);
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+  const totalBalance = accounts.reduce(
+    (sum, acc) => sum + parseFloat(String(acc.balance)),
+    0,
+  );
   const recentTransactions = transactions.slice(0, 5);
 
   return (
@@ -89,11 +92,11 @@ export const Dashboard: React.FC = () => {
             {accounts.map((account) => (
               <div key={account.id} className="account-item">
                 <div className="account-info">
-                  <div className="account-number">{account.accountNumber}</div>
-                  <div className="account-type">{account.accountType}</div>
+                  <div className="account-number">{account.account_number}</div>
+                  <div className="account-type">{account.account_type}</div>
                 </div>
                 <div className="account-balance">
-                  ${account.balance.toFixed(2)}
+                  ${parseFloat(String(account.balance)).toFixed(2)}
                 </div>
               </div>
             ))}
@@ -120,14 +123,15 @@ export const Dashboard: React.FC = () => {
           <tbody>
             {recentTransactions.map((txn) => (
               <tr key={txn.id}>
-                <td>{new Date(txn.createdAt).toLocaleDateString()}</td>
+                <td>{new Date(txn.created_at).toLocaleDateString()}</td>
                 <td>{txn.type}</td>
                 <td
                   className={
                     txn.type === 'DEPOSIT' ? 'text-success' : 'text-danger'
                   }
                 >
-                  {txn.type === 'DEPOSIT' ? '+' : '-'}${txn.amount.toFixed(2)}
+                  {txn.type === 'DEPOSIT' ? '+' : '-'}$
+                  {parseFloat(String(txn.amount)).toFixed(2)}
                 </td>
                 <td>
                   <span

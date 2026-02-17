@@ -33,6 +33,52 @@ export class Account {
   @Column({ default: 'USD' })
   currency: string;
 
+  @Column({ default: false })
+  isFrozen: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  frozen_at: Date;
+
+  @Column({ type: 'text', nullable: true })
+  freeze_reason: string;
+
+  @Column({ default: 'ACTIVE' })
+  status: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  closedAt: Date;
+
+  @Column({ type: 'text', nullable: true })
+  closeReason: string;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  dailyWithdrawalLimit: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  dailyTransferLimit: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  monthlyWithdrawalLimit: number;
+
+  // Fixed Deposit / Recurring Deposit specific fields
+  @Column({ type: 'date', nullable: true })
+  maturity_date: Date;
+
+  @Column({ type: 'int', nullable: true })
+  lock_period_months: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  deposit_interest_rate: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  monthly_deposit_amount: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  maturity_amount: number;
+
+  @Column({ type: 'date', nullable: true })
+  deposit_start_date: Date;
+
   @Column()
   user_id: number;
 

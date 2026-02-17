@@ -1,6 +1,10 @@
 import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
-import { CreateAccountDto } from './dto/account.dto';
+import {
+  CreateAccountDto,
+  CreateFixedDepositDto,
+  CreateRecurringDepositDto,
+} from './dto/account.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { GetUser } from '@/common/decorators/get-user.decorator';
 
@@ -25,5 +29,38 @@ export class AccountsController {
   @Get(':id')
   findOne(@Param('id') id: string, @GetUser('userId') userId: number) {
     return this.accountsService.findOne(+id, userId);
+  }
+
+  // Fixed Deposit Endpoints
+  @Post('fixed-deposit')
+  createFixedDeposit(
+    @GetUser('userId') userId: number,
+    @Body() createFDDto: CreateFixedDepositDto,
+  ) {
+    return this.accountsService.createFixedDeposit(userId, createFDDto);
+  }
+
+  // Recurring Deposit Endpoints
+  @Post('recurring-deposit')
+  createRecurringDeposit(
+    @GetUser('userId') userId: number,
+    @Body() createRDDto: CreateRecurringDepositDto,
+  ) {
+    return this.accountsService.createRecurringDeposit(userId, createRDDto);
+  }
+
+  // Get deposit account details
+  @Get('deposit/:id/details')
+  getDepositDetails(
+    @Param('id') accountId: string,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.accountsService.getDepositAccountDetails(+accountId, userId);
+  }
+
+  // Check withdrawal eligibility
+  @Get(':id/can-withdraw')
+  canWithdraw(@Param('id') accountId: string) {
+    return this.accountsService.canWithdraw(+accountId);
   }
 }

@@ -1,6 +1,17 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Query,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { DepositDto, WithdrawDto, TransferDto } from './dto/transaction.dto';
+import { AddBeneficiaryDto, UpdateBeneficiaryDto } from './dto/beneficiary.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { GetUser } from '@/common/decorators/get-user.decorator';
 
@@ -39,5 +50,48 @@ export class TransactionsController {
       userId,
       accountId ? +accountId : undefined,
     );
+  }
+
+  // Beneficiary Management Endpoints
+  @Post('beneficiaries')
+  addBeneficiary(
+    @Body() addBeneficiaryDto: AddBeneficiaryDto,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.transactionsService.addBeneficiary(addBeneficiaryDto, userId);
+  }
+
+  @Get('beneficiaries')
+  getBeneficiaries(@GetUser('userId') userId: number) {
+    return this.transactionsService.getBeneficiaries(userId);
+  }
+
+  @Get('beneficiaries/:id')
+  getBeneficiaryById(
+    @Param('id') beneficiaryId: number,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.transactionsService.getBeneficiaryById(beneficiaryId, userId);
+  }
+
+  @Put('beneficiaries/:id')
+  updateBeneficiary(
+    @Param('id') beneficiaryId: number,
+    @Body() updateBeneficiaryDto: UpdateBeneficiaryDto,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.transactionsService.updateBeneficiary(
+      beneficiaryId,
+      updateBeneficiaryDto,
+      userId,
+    );
+  }
+
+  @Delete('beneficiaries/:id')
+  deleteBeneficiary(
+    @Param('id') beneficiaryId: number,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.transactionsService.deleteBeneficiary(beneficiaryId, userId);
   }
 }

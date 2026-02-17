@@ -65,6 +65,7 @@ export const AdminPanel = () => {
       return;
     }
 
+    console.log('Admin Panel: Fetching initial data...');
     getAllUsers();
     getAllAccounts();
     getSystemConfig();
@@ -72,11 +73,26 @@ export const AdminPanel = () => {
 
   useEffect(() => {
     if (activeTab === 'transactions') {
+      console.log('Fetching transactions...');
       getAllTransactions();
     } else if (activeTab === 'audit') {
+      console.log('Fetching audit logs...');
       getAuditLogs();
     }
   }, [activeTab]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Admin Panel State:', {
+      users: users.length,
+      accounts: accounts.length,
+      transactions: transactions.length,
+      auditLogs: auditLogs.length,
+      systemConfig: systemConfig ? Object.keys(systemConfig).length : 0,
+      loading,
+      error,
+    });
+  }, [users, accounts, transactions, auditLogs, systemConfig, loading, error]);
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,11 +109,17 @@ export const AdminPanel = () => {
 
   const handleActivateUser = async (userId: number, isActive: boolean) => {
     try {
+      console.log('Activating user:', userId, 'to isActive:', isActive);
       await activateUser(userId, isActive);
-      getAllUsers();
+      await getAllUsers();
       alert(`User ${isActive ? 'activated' : 'deactivated'} successfully!`);
-    } catch (error) {
-      alert('Failed to update user status');
+    } catch (error: any) {
+      console.error('Failed to update user status:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to update user status';
+      alert(errorMessage);
     }
   };
 
@@ -291,18 +313,22 @@ export const AdminPanel = () => {
                       </td>
                       <td>
                         <button
+                          type="button"
                           onClick={() =>
                             handleActivateUser(user.id, !user.isActive)
                           }
                           className="btn-small"
+                          disabled={loading}
                         >
                           {user.isActive ? 'Deactivate' : 'Activate'}
                         </button>
                         <button
+                          type="button"
                           onClick={() =>
                             handleLockUser(user.id, !user.isLocked)
                           }
                           className="btn-small btn-warning"
+                          disabled={loading}
                         >
                           {user.isLocked ? 'Unlock' : 'Lock'}
                         </button>

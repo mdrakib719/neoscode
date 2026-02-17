@@ -6,8 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
+import { Beneficiary } from './entities/beneficiary.entity';
 import { Account } from '@/accounts/entities/account.entity';
 import { DepositDto, WithdrawDto, TransferDto } from './dto/transaction.dto';
+import { AddBeneficiaryDto, UpdateBeneficiaryDto } from './dto/beneficiary.dto';
 import { TransactionType, TransactionStatus } from '@/common/enums';
 
 @Injectable()
@@ -15,6 +17,8 @@ export class TransactionsService {
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    @InjectRepository(Beneficiary)
+    private beneficiaryRepository: Repository<Beneficiary>,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     private dataSource: DataSource,
@@ -203,5 +207,75 @@ export class TransactionsService {
     }
 
     return query.orderBy('transaction.created_at', 'DESC').getMany();
+  }
+
+  // Beneficiary Management
+  async addBeneficiary(
+    addBeneficiaryDto: AddBeneficiaryDto,
+    userId: number,
+  ): Promise<Beneficiary> {
+    // Check if beneficiary already exists for this user
+    const existing = await this.beneficiaryRepository.findOne({
+      where: {
+        user_id: userId,
+        account_number: addBeneficiaryDto.account_number,
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Beneficiary already exists');
+    }
+
+    const beneficiary = this.beneficiaryRepository.create({
+      ...addBeneficiaryDto,
+      user_id: userId,
+    });
+
+    return this.beneficiaryRepository.save(beneficiary);
+  }
+
+  async getBeneficiaries(userId: number): Promise<Beneficiary[]> {
+    return this.beneficiaryRepository.find({
+      where: { user_id: userId, is_active: true },
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async getBeneficiaryById(
+    beneficiaryId: number,
+    userId: number,
+  ): Promise<Beneficiary> {
+    const beneficiary = await this.beneficiaryRepository.findOne({
+      where: { id: beneficiaryId, user_id: userId },
+    });
+
+    if (!beneficiary) {
+      throw new NotFoundException('Beneficiary not found');
+    }
+
+    return beneficiary;
+  }
+
+  async updateBeneficiary(
+    beneficiaryId: number,
+    updateBeneficiaryDto: UpdateBeneficiaryDto,
+    userId: number,
+  ): Promise<Beneficiary> {
+    const beneficiary = await this.getBeneficiaryById(beneficiaryId, userId);
+
+    Object.assign(beneficiary, updateBeneficiaryDto);
+
+    return this.beneficiaryRepository.save(beneficiary);
+  }
+
+  async deleteBeneficiary(
+    beneficiaryId: number,
+    userId: number,
+  ): Promise<void> {
+    const beneficiary = await this.getBeneficiaryById(beneficiaryId, userId);
+
+    // Soft delete - mark as inactive instead of deleting
+    beneficiary.is_active = false;
+    await this.beneficiaryRepository.save(beneficiary);
   }
 }

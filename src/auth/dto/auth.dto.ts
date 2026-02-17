@@ -32,4 +32,20 @@ export class LoginDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @IsString()
+  @IsOptional()
+  twoFactorCode?: string;
+}
+
+export class Enable2FADto {
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class Verify2FADto {
+  @IsString()
+  @IsNotEmpty()
+  token: string;
 }

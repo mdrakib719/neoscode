@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
@@ -35,5 +36,46 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   getSystemReport() {
     return this.reportsService.getSystemReport();
+  }
+
+  // PDF Export Endpoints
+  @Get('pdf/statement')
+  async downloadStatement(
+    @Query('accountId') accountId: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Res() res: Response,
+  ) {
+    return this.reportsService.generatePDFStatement(
+      +accountId,
+      +year,
+      +month,
+      res,
+    );
+  }
+
+  @Get('pdf/loan-summary')
+  async downloadLoanSummary(
+    @GetUser('userId') userId: number,
+    @Res() res: Response,
+  ) {
+    return this.reportsService.generatePDFLoanSummary(userId, res);
+  }
+
+  @Get('pdf/transactions')
+  async downloadTransactionReport(
+    @GetUser('userId') userId: number,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return this.reportsService.generatePDFTransactionReport(
+      userId,
+      start,
+      end,
+      res,
+    );
   }
 }

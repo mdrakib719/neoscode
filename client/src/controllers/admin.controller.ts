@@ -72,8 +72,10 @@ export const useAdminStore = create<AdminState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await adminService.getAllUsers();
-      set({ users: response.data || [], loading: false });
+      console.log('getAllUsers response:', response);
+      set({ users: response || [], loading: false });
     } catch (error: any) {
+      console.error('getAllUsers error:', error);
       set({
         error: error.response?.data?.message || 'Failed to fetch users',
         loading: false,
@@ -156,8 +158,10 @@ export const useAdminStore = create<AdminState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await adminService.getAllAccounts(page);
-      set({ accounts: response.data?.accounts || [], loading: false });
+      console.log('getAllAccounts response:', response);
+      set({ accounts: response.accounts || [], loading: false });
     } catch (error: any) {
+      console.error('getAllAccounts error:', error);
       set({
         error: error.response?.data?.message || 'Failed to fetch accounts',
         loading: false,
@@ -212,8 +216,10 @@ export const useAdminStore = create<AdminState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await adminService.getAllTransactions(page, status);
-      set({ transactions: response.data?.transactions || [], loading: false });
+      console.log('getAllTransactions response:', response);
+      set({ transactions: response.transactions || [], loading: false });
     } catch (error: any) {
+      console.error('getAllTransactions error:', error);
       set({
         error: error.response?.data?.message || 'Failed to fetch transactions',
         loading: false,
@@ -268,11 +274,13 @@ export const useAdminStore = create<AdminState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await adminService.getSystemConfig();
+      console.log('getSystemConfig response:', response);
       set({
-        systemConfig: response.data?.configurations || {},
+        systemConfig: response.configurations || {},
         loading: false,
       });
     } catch (error: any) {
+      console.error('getSystemConfig error:', error);
       set({
         error: error.response?.data?.message || 'Failed to fetch config',
         loading: false,
@@ -327,8 +335,10 @@ export const useAdminStore = create<AdminState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await adminService.getAuditLogs(page, userId, action);
-      set({ auditLogs: response.data?.logs || [], loading: false });
+      console.log('getAuditLogs response:', response);
+      set({ auditLogs: response.logs || [], loading: false });
     } catch (error: any) {
+      console.error('getAuditLogs error:', error);
       set({
         error: error.response?.data?.message || 'Failed to fetch audit logs',
         loading: false,
@@ -341,7 +351,7 @@ export const useAdminStore = create<AdminState>((set) => ({
     try {
       const response = await adminService.getLoginActivity(days);
       set({ loading: false });
-      return response.data;
+      return response;
     } catch (error: any) {
       set({
         error:
@@ -357,7 +367,7 @@ export const useAdminStore = create<AdminState>((set) => ({
     try {
       const response = await adminService.getSuspiciousActivity();
       set({ loading: false });
-      return response.data;
+      return response;
     } catch (error: any) {
       set({
         error:

@@ -44,10 +44,10 @@ export const useLoanStore = create<LoanState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const newLoan = await loanService.apply({
-        loanType,
+        loan_type: loanType,
         amount,
-        interestRate,
-        tenureMonths,
+        interest_rate: interestRate,
+        tenure_months: tenureMonths,
       });
       set((state) => ({
         loans: [...state.loans, newLoan],
@@ -100,3 +100,50 @@ export const useLoanStore = create<LoanState>((set) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+// Helper controller object for easier component access
+export const loanController = {
+  loadLoans: () => useLoanStore.getState().fetchLoans(),
+
+  applyLoan: (data: {
+    loan_type: string;
+    amount: number;
+    tenure_months: number;
+  }) => {
+    // Calculate interest rate based on loan type
+    const calculateInterestRate = (loanType: string): number => {
+      switch (loanType) {
+        case 'PERSONAL':
+          return 12;
+        case 'HOME':
+          return 8;
+        case 'VEHICLE':
+          return 10;
+        case 'EDUCATION':
+          return 9;
+        default:
+          return 12;
+      }
+    };
+
+    const interestRate = calculateInterestRate(data.loan_type);
+
+    // Use loanService.apply directly which sends the correct snake_case format
+    return loanService.apply({
+      loan_type: data.loan_type as
+        | 'PERSONAL'
+        | 'HOME'
+        | 'VEHICLE'
+        | 'EDUCATION',
+      amount: data.amount,
+      interest_rate: interestRate,
+      tenure_months: data.tenure_months,
+    });
+  },
+
+  getLoans: () => useLoanStore.getState().loans,
+
+  selectLoan: (loan: Loan | null) => useLoanStore.getState().selectLoan(loan),
+
+  payEMI: (loanId: number) => loanService.payEMI(loanId),
+};

@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { LoansService } from './loans.service';
-import { ApplyLoanDto, ApproveLoanDto } from './dto/loan.dto';
+import { ApplyLoanDto, ApproveLoanDto, PayEMIDto } from './dto/loan.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -49,6 +49,25 @@ export class LoansController {
   @Get(':id/repayment-schedule')
   getRepaymentSchedule(@Param('id') id: string) {
     return this.loansService.getRepaymentSchedule(+id);
+  }
+
+  @Get(':id/payment-history')
+  getPaymentHistory(@Param('id') id: string) {
+    return this.loansService.getPaymentHistory(+id);
+  }
+
+  @Get(':id/summary')
+  getLoanSummary(@Param('id') id: string, @GetUser('userId') userId: number) {
+    return this.loansService.getLoanSummary(+id, userId);
+  }
+
+  @Post(':id/pay-emi')
+  payEMI(
+    @Param('id') id: string,
+    @GetUser('userId') userId: number,
+    @Body() payEMIDto: PayEMIDto,
+  ) {
+    return this.loansService.payEMI(+id, userId, payEMIDto);
   }
 
   @Put(':id/approve')
