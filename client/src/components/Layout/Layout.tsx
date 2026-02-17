@@ -7,8 +7,8 @@ export const Layout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -22,6 +22,9 @@ export const Layout: React.FC = () => {
         <div className="navbar-menu">
           <Link to="/dashboard" className="nav-link">
             Dashboard
+          </Link>
+          <Link to="/profile" className="nav-link">
+            Profile
           </Link>
           <Link to="/accounts" className="nav-link">
             Accounts

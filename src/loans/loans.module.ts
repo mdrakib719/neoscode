@@ -6,10 +6,12 @@ import { Loan } from './entities/loan.entity';
 import { LoanPayment } from './entities/loan-payment.entity';
 import { Account } from '@/accounts/entities/account.entity';
 import { Transaction } from '@/transactions/entities/transaction.entity';
+import { AuthModule } from '@/auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Loan, LoanPayment, Account, Transaction]),
+    AuthModule,
   ],
   controllers: [LoansController],
   providers: [LoansService],

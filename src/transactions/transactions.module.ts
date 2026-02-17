@@ -6,6 +6,7 @@ import { Transaction } from './entities/transaction.entity';
 import { Beneficiary } from './entities/beneficiary.entity';
 import { DepositRequest } from './entities/deposit-request.entity';
 import { Account } from '@/accounts/entities/account.entity';
+import { AuthModule } from '@/auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Account } from '@/accounts/entities/account.entity';
       DepositRequest,
       Account,
     ]),
+    AuthModule,
   ],
   controllers: [TransactionsController],
   providers: [TransactionsService],

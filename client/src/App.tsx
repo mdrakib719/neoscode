@@ -7,6 +7,7 @@ import { AdminPanel } from './views/admin/AdminPanel';
 import { Accounts } from './views/accounts/Accounts';
 import { Transactions } from './views/transactions/Transactions';
 import { Loans } from './views/loans/Loans';
+import { Profile } from './views/profile/Profile';
 import { Layout } from './components/Layout/Layout';
 import { useAuthStore } from './controllers/auth.controller';
 import './index.css';
@@ -35,6 +36,7 @@ function App() {
         >
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="accounts" element={<Accounts />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="loans" element={<Loans />} />

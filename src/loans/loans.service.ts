@@ -143,10 +143,14 @@ export class LoansService {
         targetAccount = userAccounts[0];
       }
 
-      // Credit the loan amount to the user's account
-      targetAccount.balance =
-        Number(targetAccount.balance) + Number(loan.amount);
-      await queryRunner.manager.save(Account, targetAccount);
+      // Credit the loan amount to the user's account using direct UPDATE query
+      const currentBalance = Number(targetAccount.balance);
+      const loanAmount = Number(loan.amount);
+      await queryRunner.manager.update(
+        Account,
+        { id: targetAccount.id },
+        { balance: (currentBalance + loanAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
@@ -331,6 +335,13 @@ export class LoansService {
         throw new NotFoundException('Account not found');
       }
 
+      // Check if account is frozen
+      if (account.isFrozen) {
+        throw new BadRequestException(
+          'Account is frozen. Cannot process EMI payment. Please contact support.',
+        );
+      }
+
       // Calculate payment breakdown
       const monthlyRate = loan.interest_rate / 12 / 100;
       const remainingBalance = Number(loan.remaining_balance);
@@ -362,9 +373,10 @@ export class LoansService {
         payEMIDto.amount || Number(loan.emi_amount) + penaltyAmount;
 
       // Check if account has sufficient balance
-      if (Number(account.balance) < paymentAmount) {
+      const currentBalance = Number(account.balance);
+      if (currentBalance < paymentAmount) {
         throw new BadRequestException(
-          `Insufficient balance. Required: $${paymentAmount.toFixed(2)}, Available: $${Number(account.balance).toFixed(2)}`,
+          `Insufficient balance. Required: $${paymentAmount.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`,
         );
       }
 
@@ -373,9 +385,12 @@ export class LoansService {
         100;
       const newBalance = Math.max(0, remainingBalance - principalAmount);
 
-      // Deduct from account balance
-      account.balance = Number(account.balance) - paymentAmount;
-      await queryRunner.manager.save(Account, account);
+      // Deduct from account balance using direct UPDATE query
+      await queryRunner.manager.update(
+        Account,
+        { id: account.id },
+        { balance: (currentBalance - paymentAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {

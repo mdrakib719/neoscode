@@ -31,6 +31,9 @@ export interface Account {
   monthly_deposit_amount?: number;
   deposit_start_date?: string;
   status?: string;
+  isFrozen?: boolean;
+  deleted_at?: string;
+  deletion_reason?: string;
 }
 
 export interface Transaction {
@@ -146,8 +149,8 @@ export interface WithdrawRequest {
 }
 
 export interface TransferRequest {
-  fromAccountId: number;
-  toAccountId: number;
+  fromAccountNumber: string;
+  toAccountNumber: string;
   amount: number;
   description?: string;
 }

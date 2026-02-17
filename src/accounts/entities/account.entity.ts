@@ -79,6 +79,12 @@ export class Account {
   @Column({ type: 'date', nullable: true })
   deposit_start_date: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at: Date;
+
+  @Column({ type: 'text', nullable: true })
+  deletion_reason: string;
+
   @Column()
   user_id: number;
 

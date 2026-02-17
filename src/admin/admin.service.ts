@@ -4,13 +4,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { User } from '@/users/entities/user.entity';
 import { Account } from '@/accounts/entities/account.entity';
+import { AccountDeletionRequest } from '@/accounts/entities/account-deletion-request.entity';
 import { Transaction } from '@/transactions/entities/transaction.entity';
 import { Loan } from '@/loans/entities/loan.entity';
 import { SystemConfig } from './entities/system-config.entity';
 import { AuditLog } from './entities/audit-log.entity';
+import { TokenBlacklistService } from '@/auth/services/token-blacklist.service';
 import * as bcrypt from 'bcrypt';
 import {
   CreateEmployeeDto,
@@ -38,6 +40,8 @@ export class AdminService {
     private userRepository: Repository<User>,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
+    @InjectRepository(AccountDeletionRequest)
+    private deletionRequestRepository: Repository<AccountDeletionRequest>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(Loan)
@@ -46,6 +50,8 @@ export class AdminService {
     private configRepository: Repository<SystemConfig>,
     @InjectRepository(AuditLog)
     private auditRepository: Repository<AuditLog>,
+    private dataSource: DataSource,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   // ==================== USER & ROLE MANAGEMENT ====================
@@ -89,6 +95,14 @@ export class AdminService {
 
     user.isActive = dto.isActive;
     const savedUser = await this.userRepository.save(user);
+
+    // If deactivating user, blacklist all their tokens
+    if (!dto.isActive) {
+      await this.tokenBlacklistService.blacklistAllUserTokens(userId);
+    } else {
+      // If reactivating, remove from ban list
+      await this.tokenBlacklistService.unbanUser(userId);
+    }
 
     await this.logAudit(
       adminId,
@@ -358,62 +372,84 @@ export class AdminService {
     dto: ReverseTransactionDto,
     adminId: number,
   ) {
-    const transaction = await this.transactionRepository.findOne({
-      where: { id: transactionId },
-      relations: ['from_account', 'to_account'],
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!transaction) {
-      throw new NotFoundException('Transaction not found');
+    try {
+      const transaction = await queryRunner.manager.findOne(Transaction, {
+        where: { id: transactionId },
+        relations: ['from_account', 'to_account'],
+      });
+
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      if (transaction.status === TransactionStatus.REVERSED) {
+        throw new BadRequestException('Transaction already reversed');
+      }
+
+      if (transaction.status === TransactionStatus.FAILED) {
+        throw new BadRequestException('Cannot reverse failed transaction');
+      }
+
+      const amount = Number(transaction.amount);
+
+      // Update account balances using direct UPDATE queries - return money to sender, take from recipient
+      if (transaction.from_account) {
+        const senderBalance = Number(transaction.from_account.balance);
+        await queryRunner.manager.update(
+          Account,
+          { id: transaction.from_account.id },
+          { balance: (senderBalance + amount) as any },
+        );
+      }
+
+      if (transaction.to_account) {
+        const receiverBalance = Number(transaction.to_account.balance);
+        await queryRunner.manager.update(
+          Account,
+          { id: transaction.to_account.id },
+          { balance: (receiverBalance - amount) as any },
+        );
+      }
+
+      // Create reverse transaction record
+      const reverseTransaction = queryRunner.manager.create(Transaction, {
+        from_account_id: transaction.to_account?.id,
+        to_account_id: transaction.from_account?.id,
+        amount: transaction.amount,
+        type: TransactionType.REVERSAL,
+        status: TransactionStatus.COMPLETED,
+        description: `Reversal of transaction #${transactionId}: ${dto.reason}`,
+      });
+      await queryRunner.manager.save(Transaction, reverseTransaction);
+
+      // Update original transaction status
+      transaction.status = TransactionStatus.REVERSED;
+      await queryRunner.manager.save(Transaction, transaction);
+
+      await this.logAudit(
+        adminId,
+        'REVERSE_TRANSACTION',
+        'transaction',
+        transactionId,
+        dto.reason,
+      );
+
+      await queryRunner.commitTransaction();
+
+      return {
+        message: 'Transaction reversed successfully',
+        reversalTransaction: reverseTransaction,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    if (transaction.status === TransactionStatus.REVERSED) {
-      throw new BadRequestException('Transaction already reversed');
-    }
-
-    if (transaction.status === TransactionStatus.FAILED) {
-      throw new BadRequestException('Cannot reverse failed transaction');
-    }
-
-    // Create reverse transaction
-    const reverseTransaction = this.transactionRepository.create({
-      from_account_id: transaction.to_account?.id,
-      to_account_id: transaction.from_account?.id,
-      amount: transaction.amount,
-      type: TransactionType.REVERSAL,
-      status: TransactionStatus.COMPLETED,
-      description: `Reversal of transaction #${transactionId}: ${dto.reason}`,
-    });
-
-    await this.transactionRepository.save(reverseTransaction);
-
-    // Update original transaction status
-    transaction.status = TransactionStatus.REVERSED;
-    await this.transactionRepository.save(transaction);
-
-    // Update account balances
-    if (transaction.from_account) {
-      transaction.from_account.balance += transaction.amount;
-      await this.accountRepository.save(transaction.from_account);
-    }
-
-    if (transaction.to_account) {
-      transaction.to_account.balance -= transaction.amount;
-      await this.accountRepository.save(transaction.to_account);
-    }
-
-    await this.logAudit(
-      adminId,
-      'REVERSE_TRANSACTION',
-      'transaction',
-      transactionId,
-      dto.reason,
-    );
-
-    return {
-      message: 'Transaction reversed successfully',
-      reversalTransaction: reverseTransaction,
-    };
   }
 
   async setTransactionLimits(dto: SetTransactionLimitDto, adminId: number) {
@@ -687,6 +723,116 @@ export class AdminService {
     }
 
     return await this.configRepository.save(config);
+  }
+
+  // ==================== ACCOUNT DELETION MANAGEMENT ====================
+
+  async getAllDeletionRequests(): Promise<AccountDeletionRequest[]> {
+    return this.deletionRequestRepository.find({
+      relations: ['account', 'user', 'processor'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async approveDeletionRequest(
+    requestId: number,
+    adminId: number,
+    remarks?: string,
+  ): Promise<AccountDeletionRequest> {
+    const request = await this.deletionRequestRepository.findOne({
+      where: { id: requestId },
+      relations: ['account'],
+    });
+
+    if (!request) {
+      throw new NotFoundException('Deletion request not found');
+    }
+
+    if (request.status !== 'PENDING') {
+      throw new BadRequestException('Request has already been processed');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Mark account as deleted
+      await queryRunner.manager.update(
+        Account,
+        { id: request.account_id },
+        {
+          deleted_at: new Date(),
+          deletion_reason: `Admin approved: ${remarks || 'No remarks'}`,
+          status: 'DELETED',
+        },
+      );
+
+      // Update deletion request
+      request.status = 'APPROVED';
+      request.admin_remarks = remarks;
+      request.processed_by = adminId;
+      request.processed_at = new Date();
+      await queryRunner.manager.save(AccountDeletionRequest, request);
+
+      await this.logAudit(
+        adminId,
+        'APPROVE_ACCOUNT_DELETION',
+        'account',
+        request.account_id,
+        `Approved deletion of account ID ${request.account_id}`,
+      );
+
+      await queryRunner.commitTransaction();
+      return request;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async rejectDeletionRequest(
+    requestId: number,
+    adminId: number,
+    remarks: string,
+  ): Promise<AccountDeletionRequest> {
+    const request = await this.deletionRequestRepository.findOne({
+      where: { id: requestId },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Deletion request not found');
+    }
+
+    if (request.status !== 'PENDING') {
+      throw new BadRequestException('Request has already been processed');
+    }
+
+    request.status = 'REJECTED';
+    request.admin_remarks = remarks;
+    request.processed_by = adminId;
+    request.processed_at = new Date();
+
+    const saved = await this.deletionRequestRepository.save(request);
+
+    await this.logAudit(
+      adminId,
+      'REJECT_ACCOUNT_DELETION',
+      'account',
+      request.account_id,
+      `Rejected deletion of account ID ${request.account_id}: ${remarks}`,
+    );
+
+    return saved;
+  }
+
+  async getAllAccountsIncludingDeleted(): Promise<Account[]> {
+    return this.accountRepository.find({
+      order: { created_at: 'DESC' },
+      relations: ['user'],
+    });
   }
 
   private async logAudit(

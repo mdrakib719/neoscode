@@ -6,9 +6,13 @@ import { Account } from '@/accounts/entities/account.entity';
 import { Transaction } from '@/transactions/entities/transaction.entity';
 import { Loan } from '@/loans/entities/loan.entity';
 import { User } from '@/users/entities/user.entity';
+import { AuthModule } from '@/auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Account, Transaction, Loan, User])],
+  imports: [
+    TypeOrmModule.forFeature([Account, Transaction, Loan, User]),
+    AuthModule,
+  ],
   controllers: [ReportsController],
   providers: [ReportsService],
 })

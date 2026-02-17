@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import {
   CreateAccountDto,
@@ -62,5 +71,21 @@ export class AccountsController {
   @Get(':id/can-withdraw')
   canWithdraw(@Param('id') accountId: string) {
     return this.accountsService.canWithdraw(+accountId);
+  }
+
+  // Delete account (or create deletion request)
+  @Delete(':id')
+  deleteAccount(
+    @Param('id') id: string,
+    @GetUser('userId') userId: number,
+    @Body('reason') reason?: string,
+  ) {
+    return this.accountsService.requestAccountDeletion(+id, userId, reason);
+  }
+
+  // Get user's deletion requests
+  @Get('deletion-requests/my-requests')
+  getUserDeletionRequests(@GetUser('userId') userId: number) {
+    return this.accountsService.getUserDeletionRequests(userId);
   }
 }

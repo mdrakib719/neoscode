@@ -110,10 +110,22 @@ export class TransactionsService {
         );
       }
 
-      // Update account balance
+      // Check if account is frozen
       const account = depositRequest.account;
-      account.balance = Number(account.balance) + Number(depositRequest.amount);
-      await queryRunner.manager.save(Account, account);
+      if (account.isFrozen) {
+        throw new BadRequestException(
+          'Cannot approve deposit for a frozen account. Please unfreeze the account first.',
+        );
+      }
+
+      // Update account balance using direct UPDATE query
+      const currentBalance = Number(account.balance);
+      const depositAmount = Number(depositRequest.amount);
+      await queryRunner.manager.update(
+        Account,
+        { id: account.id },
+        { balance: (currentBalance + depositAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
@@ -192,14 +204,27 @@ export class TransactionsService {
         throw new NotFoundException('Account not found');
       }
 
+      // Check if account is frozen
+      if (account.isFrozen) {
+        throw new BadRequestException(
+          'Account is frozen. Please contact support.',
+        );
+      }
+
       // Check balance
-      if (Number(account.balance) < withdrawDto.amount) {
+      const currentBalance = Number(account.balance);
+      const withdrawAmount = Number(withdrawDto.amount);
+
+      if (currentBalance < withdrawAmount) {
         throw new BadRequestException('Insufficient balance');
       }
 
-      // Update balance
-      account.balance = Number(account.balance) - withdrawDto.amount;
-      await queryRunner.manager.save(Account, account);
+      // Update balance using direct UPDATE query
+      await queryRunner.manager.update(
+        Account,
+        { id: account.id },
+        { balance: (currentBalance - withdrawAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
@@ -234,46 +259,65 @@ export class TransactionsService {
     await queryRunner.startTransaction();
 
     try {
-      // Find sender account
+      // Find sender account by account number
       const fromAccount = await queryRunner.manager.findOne(Account, {
-        where: { id: transferDto.fromAccountId, user_id: userId },
+        where: {
+          account_number: transferDto.fromAccountNumber,
+          user_id: userId,
+        },
       });
 
       if (!fromAccount) {
         throw new NotFoundException('Sender account not found');
       }
 
-      // Find receiver account
+      // Check if sender account is frozen
+      if (fromAccount.isFrozen) {
+        throw new BadRequestException(
+          'Sender account is frozen. Please contact support.',
+        );
+      }
+
+      // Find receiver account by account number
       const toAccount = await queryRunner.manager.findOne(Account, {
-        where: { id: transferDto.toAccountId },
+        where: { account_number: transferDto.toAccountNumber },
       });
 
       if (!toAccount) {
         throw new NotFoundException('Receiver account not found');
       }
 
-      // Check if same account
-      if (transferDto.fromAccountId === transferDto.toAccountId) {
+      // Check same account
+      if (transferDto.fromAccountNumber === transferDto.toAccountNumber) {
         throw new BadRequestException('Cannot transfer to the same account');
       }
 
       // Check balance
-      if (Number(fromAccount.balance) < transferDto.amount) {
+      const senderBalance = Number(fromAccount.balance);
+      const receiverBalance = Number(toAccount.balance);
+      const transferAmount = Number(transferDto.amount);
+
+      if (senderBalance < transferAmount) {
         throw new BadRequestException('Insufficient balance');
       }
 
-      // Deduct from sender
-      fromAccount.balance = Number(fromAccount.balance) - transferDto.amount;
-      await queryRunner.manager.save(Account, fromAccount);
+      // Update balances using direct UPDATE queries for reliability
+      await queryRunner.manager.update(
+        Account,
+        { id: fromAccount.id },
+        { balance: (senderBalance - transferAmount) as any },
+      );
 
-      // Add to receiver
-      toAccount.balance = Number(toAccount.balance) + transferDto.amount;
-      await queryRunner.manager.save(Account, toAccount);
+      await queryRunner.manager.update(
+        Account,
+        { id: toAccount.id },
+        { balance: (receiverBalance + transferAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
-        from_account_id: transferDto.fromAccountId,
-        to_account_id: transferDto.toAccountId,
+        from_account_id: fromAccount.id,
+        to_account_id: toAccount.id,
         amount: transferDto.amount,
         type: TransactionType.TRANSFER,
         status: TransactionStatus.COMPLETED,

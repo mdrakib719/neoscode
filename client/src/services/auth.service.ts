@@ -40,10 +40,19 @@ export const authService = {
     return apiClient.get<User>(API_ENDPOINTS.PROFILE);
   },
 
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+  async logout(): Promise<void> {
+    try {
+      // Call backend to blacklist token
+      await apiClient.post(API_ENDPOINTS.LOGOUT);
+    } catch (error) {
+      // Even if backend call fails, clear local storage
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local storage and redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
   },
 
   getStoredUser(): User | null {
