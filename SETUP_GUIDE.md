@@ -4,6 +4,7 @@
 
 - Node.js (v18 or higher)
 - MySQL (v8 or higher)
+- Redis (v6 or higher) - For JWT token blacklist
 - npm or yarn
 
 ## Installation Steps
@@ -23,7 +24,41 @@ Create a MySQL database:
 CREATE DATABASE banking_system;
 ```
 
-### 3. Environment Configuration
+### 3. Redis Setup
+
+Install and start Redis:
+
+**macOS (using Homebrew):**
+
+```bash
+brew install redis
+brew services start redis
+```
+
+**Ubuntu/Debian:**
+
+```bash
+sudo apt-get install redis-server
+sudo systemctl start redis
+```
+
+**Windows:**
+Download from https://redis.io/download or use WSL
+
+Verify Redis is running:
+
+```bash
+redis-cli ping
+
+# Redis (for JWT token blacklist - required for logout/ban functionality)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+```
+
+### 5
+
+### 4. Environment Configuration
 
 Copy the example environment file:
 
@@ -160,6 +195,20 @@ src/
 
 **Solution:** Change PORT in `.env` or kill the process using port 3000
 
+# Issue: Redis connection error
+
+**Solution:**
+
+- Ensure Redis is running: `redis-cli ping` should return PONG
+- Check REDIS_HOST and REDIS_PORT in `.env`
+- If using password authentication, set REDIS_PASSWORD
+
+### Issue: Logout not working
+
+**Solution:** Ensure Redis is running and properly configured. The token blacklist requires Redis to immediately invalidate JWT tokens on logout or user ban.
+
+##
+
 ### Issue: JWT authentication fails
 
 **Solution:** Ensure JWT_SECRET is set in `.env`
@@ -181,10 +230,11 @@ src/
 1. **Clean Architecture:** Modular structure with separation of concerns
 2. **Database Transactions:** QueryRunner for ACID compliance
 3. **RBAC:** Role-based access control implementation
-4. **Scheduled Jobs:** Cron jobs for interest calculation
-5. **Security:** JWT, bcrypt, validation, rate limiting
-6. **EMI Calculation:** Mathematical formula implementation
-7. **TypeORM:** Relations, query builder, transactions
+4. **JWT Security:** Token blacklist with Redis for immediate logout/ban, configurable expiration
+5. **Scheduled Jobs:** Cron jobs for interest calculation
+6. **Security:** JWT, bcrypt, validation, rate limiting, token revocation
+7. **EMI Calculation:** Mathematical formula implementation
+8. **TypeORM:** Relations, query builder, transactions
 
 ### Common Questions & Answers
 
@@ -202,6 +252,12 @@ A: Customer applies → Status: PENDING → Admin/Employee reviews → Approve/R
 
 **Q: How is EMI calculated?**
 A: Using standard formula: EMI = [P x R x (1+R)^N] / [(1+R)^N – 1]
+
+**Q: How do you handle JWT token invalidation on logout?**
+A: Using Redis-based token blacklist. When user logs out or admin bans user, tokens are added to Redis with TTL matching token expiration. JwtAuthGuard checks blacklist before allowing access.
+
+**Q: Why use Redis for token blacklist instead of database?**
+A: Redis provides O(1) lookup performance for high-frequency auth checks, automatic TTL-based cleanup, and minimal latency impact on every request.
 
 ## Next Steps
 

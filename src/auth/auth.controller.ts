@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, Enable2FADto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -16,6 +16,14 @@ export class AuthController {
   @Post('login')
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  logout(@Req() request: any) {
+    const token = this.extractTokenFromHeader(request);
+    const userId = request.user?.id;
+    return this.authService.logout(token, userId);
   }
 
   // Two-Factor Authentication Endpoints
@@ -47,5 +55,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   verify2FA(@Body('token') token: string, @GetUser('userId') userId: number) {
     return this.authService.verify2FA(userId, token);
+  }
+
+  private extractTokenFromHeader(request: any): string | null {
+    const authHeader = request.headers.authorization;
+    if (!authHeader) {
+      return null;
+    }
+
+    const [type, token] = authHeader.split(' ');
+    return type === 'Bearer' ? token : null;
   }
 }

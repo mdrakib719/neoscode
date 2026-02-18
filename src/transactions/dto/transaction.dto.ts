@@ -29,13 +29,11 @@ export class WithdrawDto {
 }
 
 export class TransferDto {
-  @IsNumber()
-  @IsPositive()
-  fromAccountId: number;
+  @IsString()
+  fromAccountNumber: string;
 
-  @IsNumber()
-  @IsPositive()
-  toAccountId: number;
+  @IsString()
+  toAccountNumber: string;
 
   @IsNumber()
   @IsPositive()

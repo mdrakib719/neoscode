@@ -61,6 +61,14 @@ export class LoansController {
     return this.loansService.getLoanSummary(+id, userId);
   }
 
+  @Get(':id/next-emi')
+  getNextEMIDetails(
+    @Param('id') id: string,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.loansService.getNextEMIDetails(+id, userId);
+  }
+
   @Post(':id/pay-emi')
   payEMI(
     @Param('id') id: string,

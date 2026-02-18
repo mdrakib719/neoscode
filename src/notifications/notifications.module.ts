@@ -6,10 +6,12 @@ import { join } from 'path';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { Notification } from './entities/notification.entity';
+import { AuthModule } from '@/auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Notification]),
+    AuthModule,
     MailerModule.forRoot({
       transport: {
         host: process.env.MAIL_HOST || 'smtp.gmail.com',

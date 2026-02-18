@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
   // Auth
   REGISTER: '/auth/register',
   LOGIN: '/auth/login',
+  LOGOUT: '/auth/logout',
 
   // Users
   PROFILE: '/users/profile',
@@ -18,6 +19,11 @@ export const API_ENDPOINTS = {
   // Transactions
   TRANSACTIONS: '/transactions',
   DEPOSIT: '/transactions/deposit',
+  DEPOSIT_REQUESTS: '/transactions/deposit-requests',
+  DEPOSIT_REQUEST_APPROVE: (id: number) =>
+    `/transactions/deposit-requests/${id}/approve`,
+  DEPOSIT_REQUEST_REJECT: (id: number) =>
+    `/transactions/deposit-requests/${id}/reject`,
   WITHDRAW: '/transactions/withdraw',
   TRANSFER: '/transactions/transfer',
 
@@ -27,6 +33,7 @@ export const API_ENDPOINTS = {
   LOAN_APPROVE: (id: number) => `/loans/${id}/approve`,
   LOAN_REJECT: (id: number) => `/loans/${id}/reject`,
   LOAN_SCHEDULE: (id: number) => `/loans/${id}/repayment-schedule`,
+  LOAN_NEXT_EMI: (id: number) => `/loans/${id}/next-emi`,
   LOAN_PAY_EMI: (id: number) => `/loans/${id}/pay-emi`,
 
   // Reports

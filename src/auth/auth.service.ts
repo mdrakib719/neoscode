@@ -12,6 +12,7 @@ import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 import { User } from '@/users/entities/user.entity';
 import { RegisterDto, LoginDto, Enable2FADto } from './dto/auth.dto';
+import { TokenBlacklistService } from './services/token-blacklist.service';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -232,5 +234,49 @@ export class AuthService {
       token: token,
       window: 2,
     });
+  }
+
+  // ==================== LOGOUT & TOKEN MANAGEMENT ====================
+
+  /**
+   * Logout user by blacklisting their token
+   * @param token - JWT token to blacklist
+   * @param userId - ID of the user logging out
+   */
+  async logout(token: string, userId: number): Promise<{ message: string }> {
+    if (token) {
+      // Decode to get the expiry so the DB row has the right TTL
+      const decoded = this.jwtService.decode(token) as any;
+      const expiresAt = decoded?.exp
+        ? new Date(decoded.exp * 1000)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000); // fallback: 24h
+
+      await this.tokenBlacklistService.blacklistToken(
+        token,
+        userId,
+        expiresAt,
+        'logout',
+      );
+    }
+
+    return {
+      message: 'Logged out successfully',
+    };
+  }
+
+  /**
+   * Blacklist all tokens for a user (used when admin bans user)
+   * @param userId - User ID to ban
+   */
+  async blacklistUserTokens(userId: number): Promise<void> {
+    await this.tokenBlacklistService.blacklistAllUserTokens(userId);
+  }
+
+  /**
+   * Check if a token is blacklisted
+   * @param token - JWT token to check
+   */
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    return this.tokenBlacklistService.isTokenBlacklisted(token);
   }
 }

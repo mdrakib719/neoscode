@@ -19,8 +19,8 @@ interface TransactionState {
     description?: string,
   ) => Promise<void>;
   transfer: (
-    fromAccountId: number,
-    toAccountId: number,
+    fromAccountNumber: string,
+    toAccountNumber: string,
     amount: number,
     description?: string,
   ) => Promise<void>;
@@ -48,18 +48,16 @@ export const useTransactionStore = create<TransactionState>((set) => ({
   deposit: async (accountId, amount, description) => {
     set({ isLoading: true, error: null });
     try {
-      const newTransaction = await transactionService.deposit({
+      // Create deposit request instead of direct deposit
+      await transactionService.createDepositRequest({
         accountId,
         amount,
         description,
       });
-      set((state) => ({
-        transactions: [newTransaction, ...state.transactions],
-        isLoading: false,
-      }));
+      set({ isLoading: false });
     } catch (error: any) {
       set({
-        error: error.response?.data?.message || 'Deposit failed',
+        error: error.response?.data?.message || 'Deposit request failed',
         isLoading: false,
       });
       throw error;
@@ -87,12 +85,12 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     }
   },
 
-  transfer: async (fromAccountId, toAccountId, amount, description) => {
+  transfer: async (fromAccountNumber, toAccountNumber, amount, description) => {
     set({ isLoading: true, error: null });
     try {
       const newTransaction = await transactionService.transfer({
-        fromAccountId,
-        toAccountId,
+        fromAccountNumber,
+        toAccountNumber,
         amount,
         description,
       });
@@ -133,16 +131,16 @@ export const transactionController = {
       .getState()
       .withdraw(data.accountId, data.amount, data.description),
   transfer: (data: {
-    fromAccountId: number;
-    toAccountId: number;
+    fromAccountNumber: string;
+    toAccountNumber: string;
     amount: number;
     description?: string;
   }) =>
     useTransactionStore
       .getState()
       .transfer(
-        data.fromAccountId,
-        data.toAccountId,
+        data.fromAccountNumber,
+        data.toAccountNumber,
         data.amount,
         data.description,
       ),

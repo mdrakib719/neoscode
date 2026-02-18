@@ -145,5 +145,6 @@ export const loanController = {
 
   selectLoan: (loan: Loan | null) => useLoanStore.getState().selectLoan(loan),
 
-  payEMI: (loanId: number) => loanService.payEMI(loanId),
+  payEMI: (loanId: number, accountId: number, amount?: number) =>
+    loanService.payEMI(loanId, accountId, amount),
 };

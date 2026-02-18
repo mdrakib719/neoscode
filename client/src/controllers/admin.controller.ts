@@ -23,6 +23,7 @@ interface AdminState {
     isLocked: boolean,
     reason?: string,
   ) => Promise<void>;
+  unlockUser: (userId: number, reason?: string) => Promise<void>;
   assignRole: (userId: number, role: string) => Promise<void>;
   resetPassword: (userId: number, newPassword: string) => Promise<void>;
 
@@ -119,6 +120,20 @@ export const useAdminStore = create<AdminState>((set) => ({
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to lock user',
+        loading: false,
+      });
+      throw error;
+    }
+  },
+
+  unlockUser: async (userId, reason) => {
+    set({ loading: true, error: null });
+    try {
+      await adminService.unlockUser(userId, { reason });
+      set({ loading: false });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to unlock user',
         loading: false,
       });
       throw error;

@@ -18,7 +18,17 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     const users = await this.userRepository.find({
-      select: ['id', 'name', 'email', 'role', 'created_at'],
+      select: [
+        'id',
+        'name',
+        'email',
+        'role',
+        'isActive',
+        'isLocked',
+        'locked_at',
+        'lock_reason',
+        'created_at',
+      ],
     });
     return users;
   }

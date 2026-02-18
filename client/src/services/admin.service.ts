@@ -15,6 +15,9 @@ export const adminService = {
   lockUser: (userId: number, data: { isLocked: boolean; reason?: string }) =>
     api.put(`/admin/users/${userId}/lock`, data),
 
+  unlockUser: (userId: number, data: { reason?: string }) =>
+    api.put(`/admin/users/${userId}/unlock`, data),
+
   assignRole: (userId: number, data: { role: string }) =>
     api.put(`/admin/users/${userId}/role`, data),
 

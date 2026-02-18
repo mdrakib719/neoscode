@@ -26,8 +26,8 @@ export const Transactions: React.FC = () => {
   });
 
   const [transferData, setTransferData] = useState({
-    fromAccountId: '',
-    toAccountId: '',
+    fromAccountNumber: '',
+    toAccountNumber: '',
     amount: '',
     description: '',
   });
@@ -98,12 +98,14 @@ export const Transactions: React.FC = () => {
         amount: parseFloat(depositData.amount),
         description: depositData.description,
       });
-      alert('Deposit successful!');
+      alert(
+        'Deposit request submitted successfully! Waiting for admin approval.',
+      );
       setDepositData({ accountId: '', amount: '', description: '' });
       loadAccounts();
       loadTransactions();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Deposit failed');
+      alert(error.response?.data?.message || 'Deposit request failed');
     } finally {
       setLoading(false);
     }
@@ -134,15 +136,15 @@ export const Transactions: React.FC = () => {
     setLoading(true);
     try {
       await transactionController.transfer({
-        fromAccountId: parseInt(transferData.fromAccountId),
-        toAccountId: parseInt(transferData.toAccountId),
+        fromAccountNumber: transferData.fromAccountNumber,
+        toAccountNumber: transferData.toAccountNumber,
         amount: parseFloat(transferData.amount),
         description: transferData.description,
       });
       alert('Transfer successful!');
       setTransferData({
-        fromAccountId: '',
-        toAccountId: '',
+        fromAccountNumber: '',
+        toAccountNumber: '',
         amount: '',
         description: '',
       });
@@ -254,7 +256,21 @@ export const Transactions: React.FC = () => {
       <div className="tab-content">
         {activeTab === 'deposit' && (
           <form onSubmit={handleDeposit} className="transaction-form">
-            <h2>Deposit Money</h2>
+            <h2>Request Deposit</h2>
+            <div
+              className="info-message"
+              style={{
+                padding: '10px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '4px',
+                marginBottom: '15px',
+                color: '#856404',
+              }}
+            >
+              ℹ️ Deposit requests require admin approval. Your request will be
+              reviewed and processed by an administrator.
+            </div>
             <div className="form-group">
               <label>Select Account</label>
               <select
@@ -300,7 +316,7 @@ export const Transactions: React.FC = () => {
               />
             </div>
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Processing...' : 'Deposit'}
+              {loading ? 'Submitting Request...' : 'Submit Deposit Request'}
             </button>
           </form>
         )}
@@ -367,18 +383,18 @@ export const Transactions: React.FC = () => {
             <div className="form-group">
               <label>From Account</label>
               <select
-                value={transferData.fromAccountId}
+                value={transferData.fromAccountNumber}
                 onChange={(e) =>
                   setTransferData({
                     ...transferData,
-                    fromAccountId: e.target.value,
+                    fromAccountNumber: e.target.value,
                   })
                 }
                 required
               >
                 <option value="">Choose source account</option>
                 {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
+                  <option key={acc.id} value={acc.account_number}>
                     {acc.account_number} - {acc.account_type} ($
                     {parseFloat(String(acc.balance)).toFixed(2)})
                   </option>
@@ -386,18 +402,18 @@ export const Transactions: React.FC = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>To Account ID</label>
+              <label>To Account Number</label>
               <input
-                type="number"
-                value={transferData.toAccountId}
+                type="text"
+                value={transferData.toAccountNumber}
                 onChange={(e) =>
                   setTransferData({
                     ...transferData,
-                    toAccountId: e.target.value,
+                    toAccountNumber: e.target.value,
                   })
                 }
                 required
-                placeholder="Enter recipient account ID"
+                placeholder="Enter recipient account number (e.g., 613260814400)"
               />
             </div>
             <div className="form-group">

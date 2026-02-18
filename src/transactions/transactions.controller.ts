@@ -11,14 +11,77 @@ import {
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { DepositDto, WithdrawDto, TransferDto } from './dto/transaction.dto';
+import {
+  CreateDepositRequestDto,
+  ApproveDepositRequestDto,
+  RejectDepositRequestDto,
+} from './dto/deposit-request.dto';
 import { AddBeneficiaryDto, UpdateBeneficiaryDto } from './dto/beneficiary.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
 import { GetUser } from '@/common/decorators/get-user.decorator';
+import { UserRole } from '@/common/enums';
 
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
 export class TransactionsController {
   constructor(private transactionsService: TransactionsService) {}
+
+  // Deposit Request Endpoints
+  @Post('deposit-requests')
+  createDepositRequest(
+    @Body() createDepositRequestDto: CreateDepositRequestDto,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.transactionsService.createDepositRequest(
+      createDepositRequestDto,
+      userId,
+    );
+  }
+
+  @Get('deposit-requests')
+  getDepositRequests(
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: string,
+  ) {
+    // Admins and employees can see all deposit requests
+    if (role === UserRole.ADMIN || role === UserRole.EMPLOYEE) {
+      return this.transactionsService.getAllDepositRequests();
+    }
+    // Customers see only their deposit requests
+    return this.transactionsService.getUserDepositRequests(userId);
+  }
+
+  @Put('deposit-requests/:id/approve')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
+  approveDepositRequest(
+    @Param('id') id: string,
+    @GetUser('userId') adminId: number,
+    @Body() approveDto: ApproveDepositRequestDto,
+  ) {
+    return this.transactionsService.approveDepositRequest(
+      +id,
+      adminId,
+      approveDto,
+    );
+  }
+
+  @Put('deposit-requests/:id/reject')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
+  rejectDepositRequest(
+    @Param('id') id: string,
+    @GetUser('userId') adminId: number,
+    @Body() rejectDto: RejectDepositRequestDto,
+  ) {
+    return this.transactionsService.rejectDepositRequest(
+      +id,
+      adminId,
+      rejectDto,
+    );
+  }
 
   @Post('deposit')
   deposit(@Body() depositDto: DepositDto, @GetUser('userId') userId: number) {

@@ -4,8 +4,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, IsNull } from 'typeorm';
 import { Account } from './entities/account.entity';
+import { AccountDeletionRequest } from './entities/account-deletion-request.entity';
 import {
   CreateAccountDto,
   CreateFixedDepositDto,
@@ -19,6 +20,8 @@ export class AccountsService {
   constructor(
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
+    @InjectRepository(AccountDeletionRequest)
+    private deletionRequestRepository: Repository<AccountDeletionRequest>,
     private dataSource: DataSource,
   ) {}
 
@@ -49,7 +52,7 @@ export class AccountsService {
 
   async findAllByUser(userId: number): Promise<Account[]> {
     return this.accountRepository.find({
-      where: { user_id: userId },
+      where: { user_id: userId, deleted_at: IsNull() },
       order: { created_at: 'DESC' },
     });
   }
@@ -254,5 +257,175 @@ export class AccountsService {
       maturityValue: account.maturity_amount,
       interestEarned: Number(account.maturity_amount) - Number(account.balance),
     };
+  }
+
+  // Account deletion methods
+  async requestAccountDeletion(
+    accountId: number,
+    userId: number,
+    reason?: string,
+  ): Promise<{ requiresApproval: boolean; message: string }> {
+    const account = await this.findOne(accountId, userId);
+
+    if (account.deleted_at) {
+      throw new BadRequestException('Account is already deleted');
+    }
+
+    const balance = Number(account.balance);
+
+    // Cannot delete with negative balance
+    if (balance < 0) {
+      throw new BadRequestException(
+        'Cannot delete account with negative balance. Please clear your debt first.',
+      );
+    }
+
+    // If balance is zero, delete immediately
+    if (balance === 0) {
+      account.deleted_at = new Date();
+      account.deletion_reason = reason || 'User requested deletion';
+      account.status = 'DELETED';
+      await this.accountRepository.save(account);
+
+      return {
+        requiresApproval: false,
+        message: 'Account deleted successfully',
+      };
+    }
+
+    // If balance > 0, create deletion request for admin approval
+    const existingRequest = await this.deletionRequestRepository.findOne({
+      where: {
+        account_id: accountId,
+        status: 'PENDING',
+      },
+    });
+
+    if (existingRequest) {
+      throw new BadRequestException(
+        'A deletion request is already pending for this account',
+      );
+    }
+
+    const deletionRequest = this.deletionRequestRepository.create({
+      account_id: accountId,
+      user_id: userId,
+      balance_at_request: balance,
+      reason: reason || 'User requested deletion',
+      status: 'PENDING',
+    });
+
+    await this.deletionRequestRepository.save(deletionRequest);
+
+    return {
+      requiresApproval: true,
+      message:
+        'Account has a positive balance. Deletion request submitted for admin approval.',
+    };
+  }
+
+  // Get all deletion requests (for admin)
+  async getAllDeletionRequests(): Promise<AccountDeletionRequest[]> {
+    return this.deletionRequestRepository.find({
+      relations: ['account', 'user', 'processor'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // Get pending deletion requests for a user
+  async getUserDeletionRequests(
+    userId: number,
+  ): Promise<AccountDeletionRequest[]> {
+    return this.deletionRequestRepository.find({
+      where: { user_id: userId },
+      relations: ['account'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // Approve deletion request (admin only)
+  async approveDeletionRequest(
+    requestId: number,
+    adminId: number,
+    remarks?: string,
+  ): Promise<AccountDeletionRequest> {
+    const request = await this.deletionRequestRepository.findOne({
+      where: { id: requestId },
+      relations: ['account'],
+    });
+
+    if (!request) {
+      throw new NotFoundException('Deletion request not found');
+    }
+
+    if (request.status !== 'PENDING') {
+      throw new BadRequestException('Request has already been processed');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Mark account as deleted
+      await queryRunner.manager.update(
+        Account,
+        { id: request.account_id },
+        {
+          deleted_at: new Date(),
+          deletion_reason: `Admin approved: ${remarks || 'No remarks'}`,
+          status: 'DELETED',
+        },
+      );
+
+      // Update deletion request
+      request.status = 'APPROVED';
+      request.admin_remarks = remarks;
+      request.processed_by = adminId;
+      request.processed_at = new Date();
+      await queryRunner.manager.save(AccountDeletionRequest, request);
+
+      await queryRunner.commitTransaction();
+      return request;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // Reject deletion request (admin only)
+  async rejectDeletionRequest(
+    requestId: number,
+    adminId: number,
+    remarks: string,
+  ): Promise<AccountDeletionRequest> {
+    const request = await this.deletionRequestRepository.findOne({
+      where: { id: requestId },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Deletion request not found');
+    }
+
+    if (request.status !== 'PENDING') {
+      throw new BadRequestException('Request has already been processed');
+    }
+
+    request.status = 'REJECTED';
+    request.admin_remarks = remarks;
+    request.processed_by = adminId;
+    request.processed_at = new Date();
+
+    return this.deletionRequestRepository.save(request);
+  }
+
+  // Get all accounts including deleted (admin only)
+  async findAllIncludingDeleted(): Promise<Account[]> {
+    return this.accountRepository.find({
+      order: { created_at: 'DESC' },
+      relations: ['user'],
+    });
   }
 }

@@ -7,9 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { Beneficiary } from './entities/beneficiary.entity';
+import { DepositRequest } from './entities/deposit-request.entity';
 import { Account } from '@/accounts/entities/account.entity';
 import { DepositDto, WithdrawDto, TransferDto } from './dto/transaction.dto';
 import { AddBeneficiaryDto, UpdateBeneficiaryDto } from './dto/beneficiary.dto';
+import {
+  CreateDepositRequestDto,
+  ApproveDepositRequestDto,
+  RejectDepositRequestDto,
+} from './dto/deposit-request.dto';
 import { TransactionType, TransactionStatus } from '@/common/enums';
 
 @Injectable()
@@ -19,52 +25,165 @@ export class TransactionsService {
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(Beneficiary)
     private beneficiaryRepository: Repository<Beneficiary>,
+    @InjectRepository(DepositRequest)
+    private depositRequestRepository: Repository<DepositRequest>,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     private dataSource: DataSource,
   ) {}
 
+  // Old direct deposit method - now disabled for users
+  // Admin will use approveDepositRequest instead
   async deposit(depositDto: DepositDto, userId: number): Promise<Transaction> {
+    throw new BadRequestException(
+      'Direct deposits are not allowed. Please create a deposit request for admin approval.',
+    );
+  }
+
+  // Create deposit request (users can only request, not directly deposit)
+  async createDepositRequest(
+    createDepositRequestDto: CreateDepositRequestDto,
+    userId: number,
+  ): Promise<DepositRequest> {
+    // Find account
+    const account = await this.accountRepository.findOne({
+      where: { id: createDepositRequestDto.accountId, user_id: userId },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    // Create deposit request
+    const depositRequest = this.depositRequestRepository.create({
+      user_id: userId,
+      account_id: createDepositRequestDto.accountId,
+      amount: createDepositRequestDto.amount,
+      description: createDepositRequestDto.description || 'Deposit request',
+      status: TransactionStatus.PENDING,
+    });
+
+    return this.depositRequestRepository.save(depositRequest);
+  }
+
+  // Get all deposit requests (admin view)
+  async getAllDepositRequests(): Promise<DepositRequest[]> {
+    return this.depositRequestRepository.find({
+      relations: ['user', 'account', 'admin'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // Get user's deposit requests
+  async getUserDepositRequests(userId: number): Promise<DepositRequest[]> {
+    return this.depositRequestRepository.find({
+      where: { user_id: userId },
+      relations: ['account', 'admin'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // Approve deposit request (admin only)
+  async approveDepositRequest(
+    requestId: number,
+    adminId: number,
+    approveDto: ApproveDepositRequestDto,
+  ): Promise<DepositRequest> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // Find account
-      const account = await queryRunner.manager.findOne(Account, {
-        where: { id: depositDto.accountId, user_id: userId },
+      // Find deposit request
+      const depositRequest = await queryRunner.manager.findOne(DepositRequest, {
+        where: { id: requestId },
+        relations: ['account', 'user'],
       });
 
-      if (!account) {
-        throw new NotFoundException('Account not found');
+      if (!depositRequest) {
+        throw new NotFoundException('Deposit request not found');
       }
 
-      // Update balance
-      account.balance = Number(account.balance) + depositDto.amount;
-      await queryRunner.manager.save(Account, account);
+      if (depositRequest.status !== TransactionStatus.PENDING) {
+        throw new BadRequestException(
+          'Deposit request has already been processed',
+        );
+      }
+
+      // Check if account is frozen
+      const account = depositRequest.account;
+      if (account.isFrozen) {
+        throw new BadRequestException(
+          'Cannot approve deposit for a frozen account. Please unfreeze the account first.',
+        );
+      }
+
+      // Update account balance using direct UPDATE query
+      const currentBalance = Number(account.balance);
+      const depositAmount = Number(depositRequest.amount);
+      await queryRunner.manager.update(
+        Account,
+        { id: account.id },
+        { balance: (currentBalance + depositAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
-        to_account_id: depositDto.accountId,
-        amount: depositDto.amount,
+        to_account_id: depositRequest.account_id,
+        amount: depositRequest.amount,
         type: TransactionType.DEPOSIT,
         status: TransactionStatus.COMPLETED,
-        description: depositDto.description || 'Deposit',
+        description: depositRequest.description || 'Deposit - Admin Approved',
       });
+      await queryRunner.manager.save(Transaction, transaction);
 
-      const savedTransaction = await queryRunner.manager.save(
-        Transaction,
-        transaction,
+      // Update deposit request
+      depositRequest.status = TransactionStatus.COMPLETED;
+      depositRequest.approved_by = adminId;
+      depositRequest.admin_remarks = approveDto.remarks || 'Approved';
+      depositRequest.processed_at = new Date();
+      const updatedRequest = await queryRunner.manager.save(
+        DepositRequest,
+        depositRequest,
       );
 
       await queryRunner.commitTransaction();
-      return savedTransaction;
+      return updatedRequest;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // Reject deposit request (admin only)
+  async rejectDepositRequest(
+    requestId: number,
+    adminId: number,
+    rejectDto: RejectDepositRequestDto,
+  ): Promise<DepositRequest> {
+    const depositRequest = await this.depositRequestRepository.findOne({
+      where: { id: requestId },
+      relations: ['user', 'account'],
+    });
+
+    if (!depositRequest) {
+      throw new NotFoundException('Deposit request not found');
+    }
+
+    if (depositRequest.status !== TransactionStatus.PENDING) {
+      throw new BadRequestException(
+        'Deposit request has already been processed',
+      );
+    }
+
+    depositRequest.status = TransactionStatus.FAILED;
+    depositRequest.approved_by = adminId;
+    depositRequest.admin_remarks = rejectDto.remarks;
+    depositRequest.processed_at = new Date();
+
+    return this.depositRequestRepository.save(depositRequest);
   }
 
   async withdraw(
@@ -85,14 +204,27 @@ export class TransactionsService {
         throw new NotFoundException('Account not found');
       }
 
+      // Check if account is frozen
+      if (account.isFrozen) {
+        throw new BadRequestException(
+          'Account is frozen. Please contact support.',
+        );
+      }
+
       // Check balance
-      if (Number(account.balance) < withdrawDto.amount) {
+      const currentBalance = Number(account.balance);
+      const withdrawAmount = Number(withdrawDto.amount);
+
+      if (currentBalance < withdrawAmount) {
         throw new BadRequestException('Insufficient balance');
       }
 
-      // Update balance
-      account.balance = Number(account.balance) - withdrawDto.amount;
-      await queryRunner.manager.save(Account, account);
+      // Update balance using direct UPDATE query
+      await queryRunner.manager.update(
+        Account,
+        { id: account.id },
+        { balance: (currentBalance - withdrawAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
@@ -127,46 +259,65 @@ export class TransactionsService {
     await queryRunner.startTransaction();
 
     try {
-      // Find sender account
+      // Find sender account by account number
       const fromAccount = await queryRunner.manager.findOne(Account, {
-        where: { id: transferDto.fromAccountId, user_id: userId },
+        where: {
+          account_number: transferDto.fromAccountNumber,
+          user_id: userId,
+        },
       });
 
       if (!fromAccount) {
         throw new NotFoundException('Sender account not found');
       }
 
-      // Find receiver account
+      // Check if sender account is frozen
+      if (fromAccount.isFrozen) {
+        throw new BadRequestException(
+          'Sender account is frozen. Please contact support.',
+        );
+      }
+
+      // Find receiver account by account number
       const toAccount = await queryRunner.manager.findOne(Account, {
-        where: { id: transferDto.toAccountId },
+        where: { account_number: transferDto.toAccountNumber },
       });
 
       if (!toAccount) {
         throw new NotFoundException('Receiver account not found');
       }
 
-      // Check if same account
-      if (transferDto.fromAccountId === transferDto.toAccountId) {
+      // Check same account
+      if (transferDto.fromAccountNumber === transferDto.toAccountNumber) {
         throw new BadRequestException('Cannot transfer to the same account');
       }
 
       // Check balance
-      if (Number(fromAccount.balance) < transferDto.amount) {
+      const senderBalance = Number(fromAccount.balance);
+      const receiverBalance = Number(toAccount.balance);
+      const transferAmount = Number(transferDto.amount);
+
+      if (senderBalance < transferAmount) {
         throw new BadRequestException('Insufficient balance');
       }
 
-      // Deduct from sender
-      fromAccount.balance = Number(fromAccount.balance) - transferDto.amount;
-      await queryRunner.manager.save(Account, fromAccount);
+      // Update balances using direct UPDATE queries for reliability
+      await queryRunner.manager.update(
+        Account,
+        { id: fromAccount.id },
+        { balance: (senderBalance - transferAmount) as any },
+      );
 
-      // Add to receiver
-      toAccount.balance = Number(toAccount.balance) + transferDto.amount;
-      await queryRunner.manager.save(Account, toAccount);
+      await queryRunner.manager.update(
+        Account,
+        { id: toAccount.id },
+        { balance: (receiverBalance + transferAmount) as any },
+      );
 
       // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
-        from_account_id: transferDto.fromAccountId,
-        to_account_id: transferDto.toAccountId,
+        from_account_id: fromAccount.id,
+        to_account_id: toAccount.id,
         amount: transferDto.amount,
         type: TransactionType.TRANSFER,
         status: TransactionStatus.COMPLETED,

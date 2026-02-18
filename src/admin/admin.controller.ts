@@ -20,6 +20,7 @@ import {
   CreateEmployeeDto,
   ActivateUserDto,
   LockAccountDto,
+  UnlockUserDto,
   AssignRoleDto,
   ResetPasswordDto,
   FreezeAccountDto,
@@ -99,6 +100,18 @@ export class AdminController {
     @GetUser('userId') adminId: number,
   ) {
     return this.adminService.lockUser(+userId, dto, adminId);
+  }
+
+  /**
+   * Unlock a locked user account and restore their sessions
+   */
+  @Put('users/:id/unlock')
+  unlockUser(
+    @Param('id') userId: string,
+    @Body() dto: UnlockUserDto,
+    @GetUser('userId') adminId: number,
+  ) {
+    return this.adminService.unlockUser(+userId, dto, adminId);
   }
 
   // ==================== ACCOUNT OVERSIGHT ====================
@@ -286,6 +299,56 @@ export class AdminController {
   @Get('security/suspicious-activity')
   getSuspiciousActivity() {
     return this.adminService.getSuspiciousActivity();
+  }
+
+  // ==================== ACCOUNT DELETION MANAGEMENT ====================
+
+  /**
+   * Get all account deletion requests
+   */
+  @Get('account-deletion-requests')
+  getAllDeletionRequests() {
+    return this.adminService.getAllDeletionRequests();
+  }
+
+  /**
+   * Approve account deletion request
+   */
+  @Put('account-deletion-requests/:id/approve')
+  approveDeletionRequest(
+    @Param('id') requestId: string,
+    @GetUser('userId') adminId: number,
+    @Body('remarks') remarks?: string,
+  ) {
+    return this.adminService.approveDeletionRequest(
+      +requestId,
+      adminId,
+      remarks,
+    );
+  }
+
+  /**
+   * Reject account deletion request
+   */
+  @Put('account-deletion-requests/:id/reject')
+  rejectDeletionRequest(
+    @Param('id') requestId: string,
+    @GetUser('userId') adminId: number,
+    @Body('remarks') remarks: string,
+  ) {
+    return this.adminService.rejectDeletionRequest(
+      +requestId,
+      adminId,
+      remarks,
+    );
+  }
+
+  /**
+   * Get all accounts including deleted (for history)
+   */
+  @Get('accounts/all-including-deleted')
+  getAllAccountsIncludingDeleted() {
+    return this.adminService.getAllAccountsIncludingDeleted();
   }
 
   // ==================== ANALYTICS & REPORTS ====================
