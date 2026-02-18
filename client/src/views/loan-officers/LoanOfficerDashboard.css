@@ -541,6 +541,16 @@
   background: #000;
   color: #fff;
 }
+.lo-status-paid {
+  background: #d4f5d4;
+  color: #1a5c1a;
+  border: 1px solid #b0ddb0;
+}
+.lo-status-completed {
+  background: #d4f5d4;
+  color: #1a5c1a;
+  border: 1px solid #b0ddb0;
+}
 
 /* ── Overdue ── */
 .lo-overdue-amount {
@@ -921,4 +931,86 @@
   .lo-tabs {
     width: 100%;
   }
+}
+
+/* ── Repayment Schedule ── */
+.lo-schedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.lo-schedule-header h3 {
+  margin: 0;
+}
+.lo-schedule-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lo-sched-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+.lo-sched-paid {
+  background: #d4f5d4;
+  color: #1a5c1a;
+  border: 1px solid #b0ddb0;
+}
+.lo-sched-pending {
+  background: #fff8e0;
+  color: #5c4a00;
+  border: 1px solid #f0d060;
+}
+.lo-sched-overdue {
+  background: #111;
+  color: #fff;
+}
+
+.lo-schedule-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Row-level highlights */
+.lo-schedule-row-paid td {
+  background: #f4fff4;
+}
+.lo-schedule-row-overdue td {
+  background: #fff4f4;
+}
+.lo-schedule-row-pending td {
+  background: transparent;
+}
+
+.lo-schedule-num {
+  font-weight: 700;
+  text-align: center;
+  width: 36px;
+}
+
+.lo-paid-amt {
+  font-weight: 700;
+  color: #1a5c1a;
+}
+
+/* Payment History row */
+.lo-history-row td {
+  background: #fafafa;
+}
+.lo-history-row:hover td {
+  background: #f0f8ff;
+}
+
+.lo-remarks-cell {
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #555;
+  font-size: 12px;
 }

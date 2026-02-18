@@ -65,15 +65,6 @@ export const Layout: React.FC = () => {
               >
                 📋 Loan Officer
               </Link>
-              <Link to="/accounts" className={navLinkClass('/accounts')}>
-                Accounts
-              </Link>
-              <Link
-                to="/transactions"
-                className={navLinkClass('/transactions')}
-              >
-                Transactions
-              </Link>
             </>
           )}
 

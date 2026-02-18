@@ -14,6 +14,7 @@ export const LoanOfficerDashboard: React.FC = () => {
     allLoans,
     selectedLoan,
     repaymentSchedule,
+    paymentHistory,
     dashboardStats,
     isLoading,
     actionLoading,
@@ -775,50 +776,190 @@ export const LoanOfficerDashboard: React.FC = () => {
               {/* Repayment Schedule */}
               {repaymentSchedule.length > 0 && (
                 <div className="lo-detail-section">
-                  <h3>Repayment Schedule</h3>
-                  <table className="lo-table lo-schedule-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Due Date</th>
-                        <th>EMI</th>
-                        <th>Principal</th>
-                        <th>Interest</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {repaymentSchedule.map((row: any) => (
-                        <tr key={row.installment_number}>
-                          <td>{row.installment_number}</td>
-                          <td>{new Date(row.due_date).toLocaleDateString()}</td>
-                          <td>
-                            $
-                            {parseFloat(String(row.emi_amount || 0)).toFixed(2)}
-                          </td>
-                          <td>
-                            $
-                            {parseFloat(
-                              String(row.principal_component || 0),
-                            ).toFixed(2)}
-                          </td>
-                          <td>
-                            $
-                            {parseFloat(
-                              String(row.interest_component || 0),
-                            ).toFixed(2)}
-                          </td>
-                          <td>
-                            <span
-                              className={`lo-status-badge lo-status-${(row.status || 'pending').toLowerCase()}`}
-                            >
-                              {row.status || 'PENDING'}
-                            </span>
-                          </td>
+                  <div className="lo-schedule-header">
+                    <h3>📅 Repayment Schedule</h3>
+                    <div className="lo-schedule-summary">
+                      <span className="lo-sched-badge lo-sched-paid">
+                        ✓{' '}
+                        {repaymentSchedule.filter((r: any) => r.isPaid).length}{' '}
+                        Paid
+                      </span>
+                      <span className="lo-sched-badge lo-sched-pending">
+                        {
+                          repaymentSchedule.filter(
+                            (r: any) => r.status === 'PENDING',
+                          ).length
+                        }{' '}
+                        Pending
+                      </span>
+                      {repaymentSchedule.some(
+                        (r: any) => r.status === 'OVERDUE',
+                      ) && (
+                        <span className="lo-sched-badge lo-sched-overdue">
+                          ⚠{' '}
+                          {
+                            repaymentSchedule.filter(
+                              (r: any) => r.status === 'OVERDUE',
+                            ).length
+                          }{' '}
+                          Overdue
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="lo-schedule-scroll">
+                    <table className="lo-table lo-schedule-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Due Date</th>
+                          <th>EMI</th>
+                          <th>Principal</th>
+                          <th>Interest</th>
+                          <th>Balance After</th>
+                          <th>Status</th>
+                          <th>Paid On</th>
+                          <th>Paid Amount</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {repaymentSchedule.map((row: any) => (
+                          <tr
+                            key={row.installmentNumber}
+                            className={`lo-schedule-row lo-schedule-row-${(row.status || 'pending').toLowerCase()}`}
+                          >
+                            <td className="lo-schedule-num">
+                              {row.installmentNumber}
+                            </td>
+                            <td>
+                              {new Date(row.dueDate).toLocaleDateString()}
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(String(row.emiAmount || 0)).toFixed(
+                                2,
+                              )}
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(String(row.principal || 0)).toFixed(
+                                2,
+                              )}
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(String(row.interest || 0)).toFixed(2)}
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(
+                                String(row.remainingBalance || 0),
+                              ).toFixed(2)}
+                            </td>
+                            <td>
+                              <span
+                                className={`lo-status-badge lo-status-${(row.status || 'pending').toLowerCase()}`}
+                              >
+                                {row.status || 'PENDING'}
+                              </span>
+                            </td>
+                            <td>
+                              {row.paidDate
+                                ? new Date(row.paidDate).toLocaleDateString()
+                                : '—'}
+                            </td>
+                            <td className="lo-paid-amt">
+                              {row.actualAmountPaid != null
+                                ? `$${parseFloat(String(row.actualAmountPaid)).toFixed(2)}`
+                                : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment History from loan_payments table */}
+              {paymentHistory.length > 0 && (
+                <div className="lo-detail-section">
+                  <h3>
+                    💳 Payment History ({paymentHistory.length} record
+                    {paymentHistory.length !== 1 ? 's' : ''})
+                  </h3>
+                  <div className="lo-schedule-scroll">
+                    <table className="lo-table">
+                      <thead>
+                        <tr>
+                          <th>Installment</th>
+                          <th>Amount Paid</th>
+                          <th>Principal</th>
+                          <th>Interest</th>
+                          <th>Penalty</th>
+                          <th>Outstanding</th>
+                          <th>Due Date</th>
+                          <th>Paid Date</th>
+                          <th>Status</th>
+                          <th>Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paymentHistory.map((p: any) => (
+                          <tr key={p.id} className="lo-history-row">
+                            <td className="lo-schedule-num">
+                              #{p.installment_number}
+                            </td>
+                            <td className="lo-paid-amt">
+                              $
+                              {parseFloat(String(p.amount_paid || 0)).toFixed(
+                                2,
+                              )}
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(
+                                String(p.principal_amount || 0),
+                              ).toFixed(2)}
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(
+                                String(p.interest_amount || 0),
+                              ).toFixed(2)}
+                            </td>
+                            <td>
+                              {Number(p.penalty_amount || 0) > 0
+                                ? `$${parseFloat(String(p.penalty_amount)).toFixed(2)}`
+                                : '—'}
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(
+                                String(p.outstanding_balance || 0),
+                              ).toFixed(2)}
+                            </td>
+                            <td>{new Date(p.due_date).toLocaleDateString()}</td>
+                            <td>
+                              {p.paid_date
+                                ? new Date(p.paid_date).toLocaleDateString()
+                                : '—'}
+                            </td>
+                            <td>
+                              <span
+                                className={`lo-status-badge lo-status-${(p.status || 'completed').toLowerCase()}`}
+                              >
+                                {p.status || 'COMPLETED'}
+                              </span>
+                            </td>
+                            <td className="lo-remarks-cell">
+                              {p.remarks || '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 

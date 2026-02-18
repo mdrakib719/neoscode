@@ -39,3 +39,9 @@ export enum LoanType {
   VEHICLE = 'VEHICLE',
   EDUCATION = 'EDUCATION',
 }
+
+export enum LoanPenaltyStatus {
+  PENDING = 'PENDING',
+  COLLECTED = 'COLLECTED',
+  WAIVED = 'WAIVED',
+}

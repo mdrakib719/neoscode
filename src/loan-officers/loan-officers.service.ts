@@ -220,23 +220,41 @@ export class LoanOfficersService {
   }
 
   /**
-   * Get repayment schedule for a loan
+   * Get repayment schedule for a loan merged with actual payment records
+   * from the loan_payments table
    */
   async getRepaymentSchedule(loanId: number): Promise<any[]> {
     const loan = await this.getLoanDetails(loanId);
 
+    // Fetch actual payments from loan_payments table
+    const payments = await this.loanPaymentRepository.find({
+      where: { loan_id: loanId },
+      order: { installment_number: 'ASC' },
+    });
+
+    // Map installment_number -> payment record
+    const paymentMap = new Map<number, LoanPayment>();
+    for (const p of payments) {
+      paymentMap.set(p.installment_number, p);
+    }
+
     const schedule = [];
     let remainingBalance = Number(loan.amount);
     const emiAmount = Number(loan.emi_amount);
+    const loanStartDate = new Date(loan.created_at);
 
     for (let i = 1; i <= loan.tenure_months; i++) {
-      const dueDate = new Date();
+      const dueDate = new Date(loanStartDate);
       dueDate.setMonth(dueDate.getMonth() + i);
 
       const interest =
         remainingBalance * (Number(loan.interest_rate) / 100 / 12);
       const principal = emiAmount - interest;
       remainingBalance -= principal;
+
+      const payment = paymentMap.get(i);
+      const isPaid = !!payment;
+      const isOverdue = !isPaid && new Date() > dueDate;
 
       schedule.push({
         installmentNumber: i,
@@ -245,6 +263,11 @@ export class LoanOfficersService {
         principal: Math.round(principal * 100) / 100,
         interest: Math.round(interest * 100) / 100,
         remainingBalance: Math.max(0, Math.round(remainingBalance * 100) / 100),
+        isPaid,
+        paidDate: payment?.paid_date || null,
+        actualAmountPaid: payment ? Number(payment.amount_paid) : null,
+        paymentId: payment?.id || null,
+        status: isPaid ? 'PAID' : isOverdue ? 'OVERDUE' : 'PENDING',
       });
     }
 
