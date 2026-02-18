@@ -271,3 +271,310 @@
     padding: 0.5rem;
   }
 }
+
+/* ── New Fund Transfers UI ────────────────────────────────────────────────── */
+
+.txn-page-title {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+}
+
+/* Notification banner */
+.txn-notify {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.2rem;
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.txn-notify-success {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border-left: 4px solid #43a047;
+}
+.txn-notify-error {
+  background: #fce4ec;
+  color: #880e4f;
+  border-left: 4px solid #e53935;
+}
+.txn-notify-info {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border-left: 4px solid #1e88e5;
+}
+.txn-notify-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: inherit;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+
+/* Info banners inside forms */
+.info-banner {
+  padding: 0.75rem 1rem;
+  background: #fff8e1;
+  border: 1px solid #ffc107;
+  border-radius: 5px;
+  color: #795548;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+.info-banner-blue {
+  background: #e3f2fd;
+  border-color: #90caf9;
+  color: #0d47a1;
+}
+
+/* Transfer section */
+.transfer-section h2 {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  color: var(--color-primary);
+}
+
+/* Internal / External toggle */
+.transfer-mode-toggle {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #555;
+  transition: all 0.2s;
+}
+.mode-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.mode-btn-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+.mode-hint {
+  font-size: 0.78rem;
+  font-weight: 400;
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
+/* Transfer form rows */
+.transfer-form {
+  max-width: 700px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Available balance chip */
+.balance-chip {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: #444;
+  background: #f0f4ff;
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+}
+
+/* Account lookup results */
+.lookup-found {
+  margin-top: 0.4rem;
+  font-size: 0.88rem;
+  color: #2e7d32;
+  font-weight: 500;
+}
+.lookup-notfound {
+  margin-top: 0.4rem;
+  font-size: 0.88rem;
+  color: #c62828;
+  font-weight: 500;
+}
+
+/* Transfer summary bar */
+.transfer-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f5f5f5;
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+  font-size: 0.92rem;
+  color: #333;
+}
+.transfer-summary code {
+  background: #e8eaf6;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.88rem;
+}
+.summary-amount {
+  font-size: 1.05rem;
+  color: var(--color-primary);
+}
+
+/* Transfer buttons */
+.btn-transfer {
+  min-width: 180px;
+}
+.btn-external {
+  background: #1565c0;
+}
+.btn-external:hover:not(:disabled) {
+  background: #0d47a1;
+}
+
+/* Badge for external transfer */
+.badge-external-transfer {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+/* History detail columns */
+.txn-detail {
+  font-size: 0.88rem;
+  color: #555;
+}
+.ext-detail small,
+.int-detail small {
+  color: #888;
+}
+.txn-date {
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+
+/* ── Beneficiary section layout ──────────────────────────────────────────── */
+.ben-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+.ben-add-form {
+  background: #fafafa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+.ben-add-form h2 {
+  margin-top: 0;
+  color: var(--color-primary);
+}
+.ben-list-column h2 {
+  margin-top: 0;
+  color: var(--color-primary);
+}
+
+/* Beneficiary cards */
+.ben-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.ben-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ben-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-primary);
+}
+.ben-bank-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+  margin-top: 0.2rem;
+}
+.ben-card-body {
+  margin-bottom: 0.75rem;
+}
+.ben-detail {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  margin-bottom: 0.3rem;
+}
+.ben-label {
+  font-weight: 600;
+  color: #888;
+  min-width: 52px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.ben-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.btn-send {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.btn-send:hover {
+  background: #333;
+}
+.btn-sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+  .ben-layout {
+    grid-template-columns: 1fr;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .transfer-mode-toggle {
+    flex-direction: column;
+  }
+}

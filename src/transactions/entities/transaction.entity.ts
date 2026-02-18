@@ -39,6 +39,22 @@ export class Transaction {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  // External transfer fields
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  transfer_type: 'INTERNAL' | 'EXTERNAL' | null;
+
+  @Column({ nullable: true })
+  external_bank_name: string;
+
+  @Column({ nullable: true })
+  external_account_number: string;
+
+  @Column({ nullable: true })
+  external_beneficiary_name: string;
+
+  @Column({ nullable: true })
+  external_ifsc_code: string;
+
   @ManyToOne(() => Account, (account) => account.outgoing_transactions, {
     nullable: true,
   })

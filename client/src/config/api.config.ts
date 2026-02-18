@@ -31,6 +31,9 @@ export const API_ENDPOINTS = {
     `/transactions/deposit-requests/${id}/reject`,
   WITHDRAW: '/transactions/withdraw',
   TRANSFER: '/transactions/transfer',
+  VALIDATE_ACCOUNT: '/transactions/validate-account',
+  BENEFICIARIES: '/transactions/beneficiaries',
+  BENEFICIARY: (id: number) => `/transactions/beneficiaries/${id}`,
 
   // Loans
   LOANS: '/loans',

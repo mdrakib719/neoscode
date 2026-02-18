@@ -10,7 +10,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
-import { DepositDto, WithdrawDto, TransferDto } from './dto/transaction.dto';
+import {
+  DepositDto,
+  WithdrawDto,
+  TransferDto,
+  ValidateAccountDto,
+} from './dto/transaction.dto';
 import {
   CreateDepositRequestDto,
   ApproveDepositRequestDto,
@@ -102,6 +107,11 @@ export class TransactionsController {
     @GetUser('userId') userId: number,
   ) {
     return this.transactionsService.transfer(transferDto, userId);
+  }
+
+  @Post('validate-account')
+  validateAccount(@Body() dto: ValidateAccountDto) {
+    return this.transactionsService.validateAccountNumber(dto.accountNumber);
   }
 
   @Get()

@@ -1,4 +1,10 @@
-import { IsNumber, IsPositive, IsString, IsOptional } from 'class-validator';
+import {
+  IsNumber,
+  IsPositive,
+  IsString,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 
 export class DepositDto {
   @IsNumber()
@@ -32,8 +38,10 @@ export class TransferDto {
   @IsString()
   fromAccountNumber: string;
 
+  // For internal transfers
   @IsString()
-  toAccountNumber: string;
+  @IsOptional()
+  toAccountNumber?: string;
 
   @IsNumber()
   @IsPositive()
@@ -42,4 +50,30 @@ export class TransferDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  // External transfer fields
+  @IsBoolean()
+  @IsOptional()
+  isExternal?: boolean;
+
+  @IsString()
+  @IsOptional()
+  externalBankName?: string;
+
+  @IsString()
+  @IsOptional()
+  externalAccountNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  externalBeneficiaryName?: string;
+
+  @IsString()
+  @IsOptional()
+  externalIfscCode?: string;
+}
+
+export class ValidateAccountDto {
+  @IsString()
+  accountNumber: string;
 }

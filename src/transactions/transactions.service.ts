@@ -259,7 +259,7 @@ export class TransactionsService {
     await queryRunner.startTransaction();
 
     try {
-      // Find sender account by account number
+      // Find sender account
       const fromAccount = await queryRunner.manager.findOne(Account, {
         where: {
           account_number: transferDto.fromAccountNumber,
@@ -271,14 +271,66 @@ export class TransactionsService {
         throw new NotFoundException('Sender account not found');
       }
 
-      // Check if sender account is frozen
       if (fromAccount.isFrozen) {
         throw new BadRequestException(
           'Sender account is frozen. Please contact support.',
         );
       }
 
-      // Find receiver account by account number
+      const senderBalance = Number(fromAccount.balance);
+      const transferAmount = Number(transferDto.amount);
+
+      if (senderBalance < transferAmount) {
+        throw new BadRequestException('Insufficient balance');
+      }
+
+      // ── External transfer ──────────────────────────────────────────
+      if (transferDto.isExternal) {
+        if (
+          !transferDto.externalBankName ||
+          !transferDto.externalAccountNumber
+        ) {
+          throw new BadRequestException(
+            'External bank name and account number are required for external transfers',
+          );
+        }
+
+        // Debit sender only
+        await queryRunner.manager.update(
+          Account,
+          { id: fromAccount.id },
+          { balance: (senderBalance - transferAmount) as any },
+        );
+
+        const transaction = queryRunner.manager.create(Transaction, {
+          from_account_id: fromAccount.id,
+          to_account_id: null,
+          amount: transferDto.amount,
+          type: TransactionType.EXTERNAL_TRANSFER,
+          status: TransactionStatus.COMPLETED,
+          description:
+            transferDto.description ||
+            `External transfer to ${transferDto.externalBankName}`,
+          transfer_type: 'EXTERNAL',
+          external_bank_name: transferDto.externalBankName,
+          external_account_number: transferDto.externalAccountNumber,
+          external_beneficiary_name:
+            transferDto.externalBeneficiaryName || null,
+          external_ifsc_code: transferDto.externalIfscCode || null,
+        });
+
+        const saved = await queryRunner.manager.save(Transaction, transaction);
+        await queryRunner.commitTransaction();
+        return saved;
+      }
+
+      // ── Internal transfer ──────────────────────────────────────────
+      if (!transferDto.toAccountNumber) {
+        throw new BadRequestException(
+          'Recipient account number is required for internal transfers',
+        );
+      }
+
       const toAccount = await queryRunner.manager.findOne(Account, {
         where: { account_number: transferDto.toAccountNumber },
       });
@@ -287,21 +339,12 @@ export class TransactionsService {
         throw new NotFoundException('Receiver account not found');
       }
 
-      // Check same account
       if (transferDto.fromAccountNumber === transferDto.toAccountNumber) {
         throw new BadRequestException('Cannot transfer to the same account');
       }
 
-      // Check balance
-      const senderBalance = Number(fromAccount.balance);
       const receiverBalance = Number(toAccount.balance);
-      const transferAmount = Number(transferDto.amount);
 
-      if (senderBalance < transferAmount) {
-        throw new BadRequestException('Insufficient balance');
-      }
-
-      // Update balances using direct UPDATE queries for reliability
       await queryRunner.manager.update(
         Account,
         { id: fromAccount.id },
@@ -314,29 +357,41 @@ export class TransactionsService {
         { balance: (receiverBalance + transferAmount) as any },
       );
 
-      // Create transaction record
       const transaction = queryRunner.manager.create(Transaction, {
         from_account_id: fromAccount.id,
         to_account_id: toAccount.id,
         amount: transferDto.amount,
         type: TransactionType.TRANSFER,
         status: TransactionStatus.COMPLETED,
-        description: transferDto.description || 'Transfer',
+        description: transferDto.description || 'Internal Transfer',
+        transfer_type: 'INTERNAL',
       });
 
-      const savedTransaction = await queryRunner.manager.save(
-        Transaction,
-        transaction,
-      );
-
+      const saved = await queryRunner.manager.save(Transaction, transaction);
       await queryRunner.commitTransaction();
-      return savedTransaction;
+      return saved;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async validateAccountNumber(accountNumber: string) {
+    const account = await this.accountRepository.findOne({
+      where: { account_number: accountNumber },
+      relations: ['user'],
+    });
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+    return {
+      found: true,
+      account_number: account.account_number,
+      account_type: account.account_type,
+      holder: account.user?.name ?? 'Unknown',
+    };
   }
 
   async getTransactionHistory(
