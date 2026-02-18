@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: 'ADMIN' | 'EMPLOYEE' | 'CUSTOMER';
+  two_factor_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }

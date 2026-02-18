@@ -23,6 +23,7 @@ export class ReportsService {
 
   /**
    * Generate monthly statement for an account
+   * Returns running balance per transaction row
    */
   async getMonthlyStatement(accountId: number, year: number, month: number) {
     const account = await this.accountRepository.findOne({
@@ -34,62 +35,100 @@ export class ReportsService {
       throw new NotFoundException('Account not found');
     }
 
-    // Get start and end dates for the month
+    // Start / end of requested month
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
-    // Get transactions for the period
+    // All transactions that involve this account, ordered oldest-first
     const transactions = await this.transactionRepository
-      .createQueryBuilder('transaction')
-      .where(
-        '(transaction.from_account_id = :accountId OR transaction.to_account_id = :accountId)',
-        { accountId },
-      )
-      .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.from_account', 'from_account')
+      .leftJoinAndSelect('t.to_account', 'to_account')
+      .where('(t.from_account_id = :aid OR t.to_account_id = :aid)', {
+        aid: accountId,
+      })
+      .andWhere('t.created_at BETWEEN :startDate AND :endDate', {
         startDate,
         endDate,
       })
-      .orderBy('transaction.created_at', 'ASC')
+      .orderBy('t.created_at', 'ASC')
       .getMany();
 
-    // Calculate totals
-    let totalDeposits = 0;
-    let totalWithdrawals = 0;
+    // ── calculate totals ──────────────────────────────────────
+    let totalCredits = 0;
+    let totalDebits = 0;
 
     transactions.forEach((t) => {
-      if (t.to_account_id === accountId) {
-        totalDeposits += Number(t.amount);
-      }
-      if (t.from_account_id === accountId) {
-        totalWithdrawals += Number(t.amount);
-      }
+      const amt = Number(t.amount);
+      if (t.to_account_id === accountId) totalCredits += amt;
+      if (t.from_account_id === accountId) totalDebits += amt;
+    });
+
+    // Opening balance = current balance reversed from the month's activity
+    const openingBalance = Number(account.balance) - totalCredits + totalDebits;
+
+    // ── build rows with running balance ───────────────────────
+    let runningBalance = openingBalance;
+    const rows = transactions.map((t) => {
+      const amt = Number(t.amount);
+      const isCredit = t.to_account_id === accountId;
+      const credit = isCredit ? amt : 0;
+      const debit = !isCredit ? amt : 0;
+      runningBalance += credit - debit;
+
+      return {
+        id: t.id,
+        date: t.created_at,
+        type: t.type,
+        direction: isCredit ? 'CREDIT' : 'DEBIT',
+        description: t.description || `${t.type}`,
+        debit: debit > 0 ? debit : null,
+        credit: credit > 0 ? credit : null,
+        balance: Math.round(runningBalance * 100) / 100,
+        status: t.status,
+        counterpart: isCredit
+          ? (t.from_account?.account_number ?? null)
+          : (t.to_account?.account_number ?? null),
+      };
     });
 
     return {
-      account_number: account.account_number,
-      account_type: account.account_type,
-      account_holder: account.user.name,
+      account: {
+        id: account.id,
+        account_number: account.account_number,
+        account_type: account.account_type,
+        holder: account.user?.name ?? 'Unknown',
+        email: account.user?.email ?? '',
+        current_balance: Number(account.balance),
+      },
       period: {
         year,
         month,
+        month_name: new Date(year, month - 1, 1).toLocaleString('en-US', {
+          month: 'long',
+        }),
         from: startDate.toISOString().split('T')[0],
         to: endDate.toISOString().split('T')[0],
       },
       summary: {
-        opening_balance:
-          Number(account.balance) - totalDeposits + totalWithdrawals,
-        total_deposits: totalDeposits,
-        total_withdrawals: totalWithdrawals,
+        opening_balance: Math.round(openingBalance * 100) / 100,
+        total_credits: Math.round(totalCredits * 100) / 100,
+        total_debits: Math.round(totalDebits * 100) / 100,
         closing_balance: Number(account.balance),
+        transaction_count: transactions.length,
       },
-      transactions: transactions.map((t) => ({
-        date: t.created_at,
-        type: t.type,
-        amount: Number(t.amount),
-        description: t.description,
-        balance: 0, // Can be calculated in a more detailed implementation
-      })),
+      transactions: rows,
     };
+  }
+
+  /**
+   * Get all accounts for a user (to let them pick in the UI)
+   */
+  async getUserAccounts(userId: number) {
+    return this.accountRepository.find({
+      where: { user_id: userId },
+      order: { created_at: 'ASC' },
+    });
   }
 
   /**
@@ -261,7 +300,7 @@ export class ReportsService {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=statement-${statement.account_number}-${year}-${month}.pdf`,
+      `attachment; filename=statement-${statement.account.account_number}-${year}-${month}.pdf`,
     );
 
     // Pipe the PDF to the response
@@ -275,9 +314,9 @@ export class ReportsService {
 
     // Account details
     doc.fontSize(12);
-    doc.text(`Account Number: ${statement.account_number}`);
-    doc.text(`Account Type: ${statement.account_type}`);
-    doc.text(`Account Holder: ${statement.account_holder}`);
+    doc.text(`Account Number: ${statement.account.account_number}`);
+    doc.text(`Account Type: ${statement.account.account_type}`);
+    doc.text(`Account Holder: ${statement.account.holder}`);
     doc.text(`Period: ${statement.period.from} to ${statement.period.to}`);
     doc.moveDown();
 
@@ -285,14 +324,16 @@ export class ReportsService {
     doc.fontSize(14).text('Summary', { underline: true });
     doc.fontSize(12);
     doc.text(
-      `Opening Balance: $${statement.summary.opening_balance.toFixed(2)}`,
-    );
-    doc.text(`Total Deposits: $${statement.summary.total_deposits.toFixed(2)}`);
-    doc.text(
-      `Total Withdrawals: $${statement.summary.total_withdrawals.toFixed(2)}`,
+      `Opening Balance: $${Number(statement.summary.opening_balance).toFixed(2)}`,
     );
     doc.text(
-      `Closing Balance: $${statement.summary.closing_balance.toFixed(2)}`,
+      `Total Credits: $${Number(statement.summary.total_credits).toFixed(2)}`,
+    );
+    doc.text(
+      `Total Debits: $${Number(statement.summary.total_debits).toFixed(2)}`,
+    );
+    doc.text(
+      `Closing Balance: $${Number(statement.summary.closing_balance).toFixed(2)}`,
     );
     doc.moveDown();
 
@@ -305,18 +346,20 @@ export class ReportsService {
     } else {
       statement.transactions.forEach((t) => {
         const date = new Date(t.date).toLocaleDateString();
+        const amount =
+          t.credit > 0
+            ? `+$${Number(t.credit).toFixed(2)}`
+            : `-$${Number(t.debit).toFixed(2)}`;
         doc.text(
-          `${date} | ${t.type} | $${t.amount.toFixed(2)} | ${t.description}`,
+          `${date} | ${t.type} | ${amount} | Bal: $${Number(t.balance).toFixed(2)} | ${t.description || ''}`,
         );
       });
     }
 
     doc.moveDown();
-    doc
-      .fontSize(8)
-      .text(`Generated on: ${new Date().toLocaleDateString()}`, {
-        align: 'center',
-      });
+    doc.fontSize(8).text(`Generated on: ${new Date().toLocaleDateString()}`, {
+      align: 'center',
+    });
 
     // Finalize the PDF
     doc.end();
@@ -386,11 +429,9 @@ export class ReportsService {
     }
 
     doc.moveDown();
-    doc
-      .fontSize(8)
-      .text(`Generated on: ${new Date().toLocaleDateString()}`, {
-        align: 'center',
-      });
+    doc.fontSize(8).text(`Generated on: ${new Date().toLocaleDateString()}`, {
+      align: 'center',
+    });
 
     // Finalize the PDF
     doc.end();
@@ -487,11 +528,9 @@ export class ReportsService {
     }
 
     doc.moveDown();
-    doc
-      .fontSize(8)
-      .text(`Generated on: ${new Date().toLocaleDateString()}`, {
-        align: 'center',
-      });
+    doc.fontSize(8).text(`Generated on: ${new Date().toLocaleDateString()}`, {
+      align: 'center',
+    });
 
     // Finalize the PDF
     doc.end();

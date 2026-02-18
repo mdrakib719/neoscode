@@ -33,6 +33,9 @@ export const loanOfficerService = {
   getPaymentHistory: (id: number): Promise<any[]> =>
     apiClient.get(API_ENDPOINTS.LO_LOAN_PAYMENT_HISTORY(id)),
 
+  getLoanPenalties: (id: number): Promise<any[]> =>
+    apiClient.get(API_ENDPOINTS.LO_LOAN_PENALTIES(id)),
+
   // ─── Loan Decisions ────────────────────────────────────────────────────────
   approveLoan: (
     loanId: number,
@@ -65,4 +68,17 @@ export const loanOfficerService = {
     apiClient.get(
       `${API_ENDPOINTS.LO_SEARCH_CUSTOMER}?name=${encodeURIComponent(name)}`,
     ),
+
+  // ─── Penalty ────────────────────────────────────────────────────────────────
+  runPenaltyCheck: (): Promise<any> =>
+    apiClient.post(API_ENDPOINTS.PENALTY_RUN, {}),
+
+  getPenaltySummary: (): Promise<any> =>
+    apiClient.get(API_ENDPOINTS.PENALTY_SUMMARY),
+
+  waivePenalty: (penaltyId: number, remarks?: string): Promise<any> =>
+    apiClient.post(API_ENDPOINTS.PENALTY_WAIVE(penaltyId), { remarks }),
+
+  collectPenalty: (penaltyId: number): Promise<any> =>
+    apiClient.post(API_ENDPOINTS.PENALTY_COLLECT(penaltyId), {}),
 };

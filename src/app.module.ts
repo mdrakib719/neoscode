@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { StaffModule } from './staff/staff.module';
 import { LoanOfficersModule } from './loan-officers/loan-officers.module';
+import { PenaltyModule } from './penalty/penalty.module';
 import { DatabaseConfig } from './config/database.config';
 
 @Module({
@@ -52,6 +53,7 @@ import { DatabaseConfig } from './config/database.config';
     NotificationsModule,
     StaffModule,
     LoanOfficersModule,
+    PenaltyModule,
   ],
 })
 export class AppModule {}

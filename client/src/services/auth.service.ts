@@ -8,7 +8,9 @@ import {
 } from '../models/types';
 
 export const authService = {
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
+  async login(
+    credentials: LoginRequest & { twoFactorCode?: string },
+  ): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>(
       API_ENDPOINTS.LOGIN,
       credentials,
@@ -20,6 +22,30 @@ export const authService = {
     }
 
     return response;
+  },
+
+  async generate2FA(): Promise<{
+    secret: string;
+    qrCode: string;
+    message: string;
+  }> {
+    return apiClient.post(API_ENDPOINTS.TWO_FA_GENERATE);
+  },
+
+  async enable2FA(token: string): Promise<{ message: string }> {
+    return apiClient.post(API_ENDPOINTS.TWO_FA_ENABLE, { token });
+  },
+
+  async disable2FA(password: string): Promise<{ message: string }> {
+    return apiClient.post(API_ENDPOINTS.TWO_FA_DISABLE, { password });
+  },
+
+  updateStoredUser(updates: Partial<User>): void {
+    const stored = this.getStoredUser();
+    if (stored) {
+      const updated = { ...stored, ...updates };
+      localStorage.setItem('user', JSON.stringify(updated));
+    }
   },
 
   async register(data: RegisterRequest): Promise<AuthResponse> {

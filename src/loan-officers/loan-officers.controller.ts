@@ -79,6 +79,14 @@ export class LoanOfficersController {
   }
 
   /**
+   * Get penalty records for a loan
+   */
+  @Get('loans/:loanId/penalties')
+  getLoanPenalties(@Param('loanId') loanId: string) {
+    return this.loanOfficersService.getLoanPenalties(+loanId);
+  }
+
+  /**
    * Approve a loan application
    */
   @Post('loans/:loanId/approve')

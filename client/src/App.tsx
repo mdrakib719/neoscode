@@ -10,6 +10,7 @@ import { Loans } from './views/loans/Loans';
 import { Profile } from './views/profile/Profile';
 import { StaffDashboard } from './views/staff/StaffDashboard';
 import { LoanOfficerDashboard } from './views/loan-officers/LoanOfficerDashboard';
+import { MonthlyStatement } from './views/reports/MonthlyStatement';
 import { Layout } from './components/Layout/Layout';
 import { useAuthStore } from './controllers/auth.controller';
 import './index.css';
@@ -53,6 +54,7 @@ function App() {
           <Route path="transactions" element={<Transactions />} />
           <Route path="loans" element={<Loans />} />
           <Route path="admin" element={<AdminPanel />} />
+          <Route path="statements" element={<MonthlyStatement />} />
           {/* Employee-only routes */}
           <Route
             path="staff"

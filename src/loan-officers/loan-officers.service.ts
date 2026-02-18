@@ -7,11 +7,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Between, Like } from 'typeorm';
 import { Loan } from '@/loans/entities/loan.entity';
 import { LoanPayment } from '@/loans/entities/loan-payment.entity';
+import { LoanPenalty } from '@/loans/entities/loan-penalty.entity';
 import { User } from '@/users/entities/user.entity';
 import { Account } from '@/accounts/entities/account.entity';
 import { Transaction } from '@/transactions/entities/transaction.entity';
 import {
   LoanStatus,
+  LoanPenaltyStatus,
   TransactionStatus,
   TransactionType,
   UserRole,
@@ -33,6 +35,8 @@ export class LoanOfficersService {
     private loanRepository: Repository<Loan>,
     @InjectRepository(LoanPayment)
     private loanPaymentRepository: Repository<LoanPayment>,
+    @InjectRepository(LoanPenalty)
+    private loanPenaltyRepository: Repository<LoanPenalty>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(Account)
@@ -452,6 +456,16 @@ export class LoanOfficersService {
     loan.remarks =
       (loan.remarks ? loan.remarks + ' | ' : '') + remarksDto.remarks;
     return this.loanRepository.save(loan);
+  }
+
+  /**
+   * Get all penalty records for a loan (for display in loan detail panel)
+   */
+  async getLoanPenalties(loanId: number): Promise<LoanPenalty[]> {
+    return this.loanPenaltyRepository.find({
+      where: { loan_id: loanId },
+      order: { installment_number: 'ASC' },
+    });
   }
 
   /**

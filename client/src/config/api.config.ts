@@ -6,6 +6,11 @@ export const API_ENDPOINTS = {
   REGISTER: '/auth/register',
   LOGIN: '/auth/login',
   LOGOUT: '/auth/logout',
+  // 2FA
+  TWO_FA_GENERATE: '/auth/2fa/generate',
+  TWO_FA_ENABLE: '/auth/2fa/enable',
+  TWO_FA_DISABLE: '/auth/2fa/disable',
+  TWO_FA_VERIFY: '/auth/2fa/verify',
 
   // Users
   PROFILE: '/users/profile',
@@ -38,9 +43,12 @@ export const API_ENDPOINTS = {
 
   // Reports
   REPORTS_MONTHLY: '/reports/monthly-statement',
+  REPORTS_USER_ACCOUNTS: '/reports/user-accounts',
   REPORTS_ACCOUNT_SUMMARY: '/reports/account-summary',
   REPORTS_LOAN_SUMMARY: '/reports/loan-summary',
   REPORTS_SYSTEM: '/reports/system-report',
+  REPORTS_PDF_STATEMENT: '/reports/pdf/statement',
+  REPORTS_PDF_LOAN: '/reports/pdf/loan-summary',
 
   // Interest
   INTEREST_APPLY: '/interest/apply',
@@ -75,6 +83,7 @@ export const API_ENDPOINTS = {
     `/loan-officers/loans/${id}/repayment-schedule`,
   LO_LOAN_PAYMENT_HISTORY: (id: number) =>
     `/loan-officers/loans/${id}/payment-history`,
+  LO_LOAN_PENALTIES: (id: number) => `/loan-officers/loans/${id}/penalties`,
   LO_LOAN_APPROVE: (id: number) => `/loan-officers/loans/${id}/approve`,
   LO_LOAN_REJECT: (id: number) => `/loan-officers/loans/${id}/reject`,
   LO_LOAN_PROCESS_PAYMENT: (id: number) =>
@@ -83,4 +92,11 @@ export const API_ENDPOINTS = {
   LO_DASHBOARD: '/loan-officers/dashboard/overview',
   LO_OVERDUE: '/loan-officers/dashboard/overdue',
   LO_SEARCH_CUSTOMER: '/loan-officers/search/customer',
+
+  // Penalty
+  PENALTY_RUN: '/penalty/run',
+  PENALTY_SUMMARY: '/penalty/summary',
+  PENALTY_LOAN: (loanId: number) => `/penalty/loan/${loanId}`,
+  PENALTY_WAIVE: (id: number) => `/penalty/${id}/waive`,
+  PENALTY_COLLECT: (id: number) => `/penalty/${id}/collect`,
 };

@@ -15,6 +15,7 @@ export const LoanOfficerDashboard: React.FC = () => {
     selectedLoan,
     repaymentSchedule,
     paymentHistory,
+    penalties,
     dashboardStats,
     isLoading,
     actionLoading,
@@ -28,6 +29,9 @@ export const LoanOfficerDashboard: React.FC = () => {
     approveLoan,
     rejectLoan,
     addRemarks,
+    waivePenalty,
+    collectPenalty,
+    runPenaltyCheck,
     clearMessages,
   } = useLoanOfficerStore();
 
@@ -42,6 +46,8 @@ export const LoanOfficerDashboard: React.FC = () => {
   const [remarksText, setRemarksText] = useState('');
   const [showRemarksModal, setShowRemarksModal] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState('');
+  const [showWaiveModal, setShowWaiveModal] = useState<any | null>(null);
+  const [waiveRemarks, setWaiveRemarks] = useState('');
 
   useEffect(() => {
     fetchDashboard();
@@ -247,6 +253,14 @@ export const LoanOfficerDashboard: React.FC = () => {
             <span>{overdueLoans.length}</span>
             <label>Overdue</label>
           </div>
+          <button
+            className="lo-btn-penalty-run"
+            onClick={runPenaltyCheck}
+            disabled={actionLoading}
+            title="Scan overdue installments and apply penalties"
+          >
+            {actionLoading ? '…' : '⚡ Run Penalty Check'}
+          </button>
         </div>
       </div>
 
@@ -963,6 +977,124 @@ export const LoanOfficerDashboard: React.FC = () => {
                 </div>
               )}
 
+              {/* ── Penalty Section ── */}
+              <div className="lo-detail-section">
+                <div className="lo-penalty-header">
+                  <h3>⚠ Late Payment Penalties</h3>
+                  <div className="lo-penalty-meta">
+                    <span className="lo-penalty-rate">
+                      Rate: {selectedLoan.penalty_rate ?? 2}%/month · Grace:{' '}
+                      {selectedLoan.grace_period_days ?? 5} days
+                    </span>
+                    {Number(selectedLoan.total_penalty || 0) > 0 && (
+                      <span className="lo-penalty-total">
+                        Total Accrued: $
+                        {parseFloat(
+                          String(selectedLoan.total_penalty || 0),
+                        ).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {penalties.length === 0 ? (
+                  <div className="lo-penalty-empty">
+                    ✓ No penalties — all installments within grace period
+                  </div>
+                ) : (
+                  <div className="lo-schedule-scroll">
+                    <table className="lo-table lo-penalty-table">
+                      <thead>
+                        <tr>
+                          <th>Installment</th>
+                          <th>Due Date</th>
+                          <th>Days Overdue</th>
+                          <th>EMI Amount</th>
+                          <th>Penalty Amount</th>
+                          <th>Rate Used</th>
+                          <th>Penalty Start</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {penalties.map((p: any) => (
+                          <tr
+                            key={p.id}
+                            className={`lo-penalty-row lo-penalty-row-${(p.status || 'pending').toLowerCase()}`}
+                          >
+                            <td className="lo-schedule-num">
+                              #{p.installment_number}
+                            </td>
+                            <td>{new Date(p.due_date).toLocaleDateString()}</td>
+                            <td className="lo-days-overdue">
+                              {p.days_overdue} days
+                            </td>
+                            <td>
+                              $
+                              {parseFloat(String(p.emi_amount || 0)).toFixed(2)}
+                            </td>
+                            <td className="lo-penalty-amt">
+                              $
+                              {parseFloat(
+                                String(p.penalty_amount || 0),
+                              ).toFixed(2)}
+                            </td>
+                            <td>{p.penalty_rate_used}%/mo</td>
+                            <td>
+                              {p.penalty_start_date
+                                ? new Date(
+                                    p.penalty_start_date,
+                                  ).toLocaleDateString()
+                                : '—'}
+                            </td>
+                            <td>
+                              <span
+                                className={`lo-status-badge lo-penalty-status-${(p.status || 'pending').toLowerCase()}`}
+                              >
+                                {p.status || 'PENDING'}
+                              </span>
+                            </td>
+                            <td>
+                              {p.status === 'PENDING' && (
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button
+                                    className="lo-btn-waive"
+                                    onClick={() => {
+                                      setShowWaiveModal(p);
+                                      setWaiveRemarks('');
+                                    }}
+                                    disabled={actionLoading}
+                                  >
+                                    Waive
+                                  </button>
+                                  <button
+                                    className="lo-btn-collect"
+                                    onClick={() => collectPenalty(p.id)}
+                                    disabled={actionLoading}
+                                  >
+                                    Collected
+                                  </button>
+                                </div>
+                              )}
+                              {p.status !== 'PENDING' && (
+                                <span className="lo-penalty-resolved">
+                                  {p.resolved_date
+                                    ? new Date(
+                                        p.resolved_date,
+                                      ).toLocaleDateString()
+                                    : '—'}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
               {/* Approve / Reject if pending */}
               {selectedLoan.status === 'PENDING' && (
                 <div className="lo-detail-actions">
@@ -1156,6 +1288,84 @@ export const LoanOfficerDashboard: React.FC = () => {
                 disabled={actionLoading || !remarksText.trim()}
               >
                 {actionLoading ? 'Saving…' : 'Save Remarks'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ WAIVE PENALTY MODAL ══════════════ */}
+      {showWaiveModal && (
+        <div
+          className="staff-modal-overlay"
+          onClick={() => setShowWaiveModal(null)}
+        >
+          <div className="staff-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="staff-modal-header">
+              <h2>
+                💸 Waive Penalty — Installment #
+                {showWaiveModal.installment_number}
+              </h2>
+              <button
+                className="staff-modal-close"
+                onClick={() => setShowWaiveModal(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="staff-modal-body">
+              <div className="lo-waive-summary">
+                <div>
+                  <label>Penalty Amount</label>
+                  <strong className="lo-penalty-amt">
+                    $
+                    {parseFloat(
+                      String(showWaiveModal.penalty_amount || 0),
+                    ).toFixed(2)}
+                  </strong>
+                </div>
+                <div>
+                  <label>Days Overdue</label>
+                  <strong>{showWaiveModal.days_overdue} days</strong>
+                </div>
+                <div>
+                  <label>Due Date</label>
+                  <strong>
+                    {new Date(showWaiveModal.due_date).toLocaleDateString()}
+                  </strong>
+                </div>
+              </div>
+              <div className="staff-form-group">
+                <label>Reason for Waiving (optional)</label>
+                <textarea
+                  className="staff-input staff-textarea"
+                  rows={3}
+                  placeholder="e.g. Customer hardship, bank error…"
+                  value={waiveRemarks}
+                  onChange={(e) => setWaiveRemarks(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="staff-modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowWaiveModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  await waivePenalty(
+                    showWaiveModal.id,
+                    waiveRemarks || undefined,
+                  );
+                  setShowWaiveModal(null);
+                  setWaiveRemarks('');
+                }}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Processing…' : 'Confirm Waive'}
               </button>
             </div>
           </div>

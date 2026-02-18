@@ -9,6 +9,7 @@ interface LoanOfficerState {
   selectedLoan: any | null;
   repaymentSchedule: any[];
   paymentHistory: any[];
+  penalties: any[];
   dashboardStats: any | null;
   searchResults: any[];
   isLoading: boolean;
@@ -35,6 +36,9 @@ interface LoanOfficerState {
   rejectLoan: (loanId: number, reason: string) => Promise<void>;
   addRemarks: (loanId: number, remarks: string) => Promise<void>;
   searchByCustomer: (name: string) => Promise<void>;
+  waivePenalty: (penaltyId: number, remarks?: string) => Promise<void>;
+  collectPenalty: (penaltyId: number) => Promise<void>;
+  runPenaltyCheck: () => Promise<any>;
 
   clearMessages: () => void;
 }
@@ -47,6 +51,7 @@ export const useLoanOfficerStore = create<LoanOfficerState>((set, get) => ({
   selectedLoan: null,
   repaymentSchedule: [],
   paymentHistory: [],
+  penalties: [],
   dashboardStats: null,
   searchResults: [],
   isLoading: false,
@@ -140,15 +145,17 @@ export const useLoanOfficerStore = create<LoanOfficerState>((set, get) => ({
   selectLoan: async (id: number) => {
     set({ isLoading: true, error: null });
     try {
-      const [details, schedule, history] = await Promise.all([
+      const [details, schedule, history, penalties] = await Promise.all([
         loanOfficerService.getLoanDetails(id),
         loanOfficerService.getRepaymentSchedule(id),
         loanOfficerService.getPaymentHistory(id),
+        loanOfficerService.getLoanPenalties(id),
       ]);
       set({
         selectedLoan: details,
         repaymentSchedule: Array.isArray(schedule) ? schedule : [],
         paymentHistory: Array.isArray(history) ? history : [],
+        penalties: Array.isArray(penalties) ? penalties : [],
         isLoading: false,
       });
     } catch (err: any) {
@@ -160,7 +167,12 @@ export const useLoanOfficerStore = create<LoanOfficerState>((set, get) => ({
   },
 
   clearSelectedLoan: () =>
-    set({ selectedLoan: null, repaymentSchedule: [], paymentHistory: [] }),
+    set({
+      selectedLoan: null,
+      repaymentSchedule: [],
+      paymentHistory: [],
+      penalties: [],
+    }),
 
   approveLoan: async (loanId, data) => {
     set({ actionLoading: true, error: null });
@@ -222,6 +234,73 @@ export const useLoanOfficerStore = create<LoanOfficerState>((set, get) => ({
       set({
         error: err.response?.data?.message || 'Search failed',
         isLoading: false,
+      });
+    }
+  },
+
+  waivePenalty: async (penaltyId: number, remarks?: string) => {
+    set({ actionLoading: true, error: null });
+    try {
+      await loanOfficerService.waivePenalty(penaltyId, remarks);
+      set({ actionLoading: false, successMessage: 'Penalty waived' });
+      // Refresh penalties for current loan
+      const selected = get().selectedLoan;
+      if (selected) {
+        const penalties = await loanOfficerService.getLoanPenalties(
+          selected.id,
+        );
+        const loanDetails = await loanOfficerService.getLoanDetails(
+          selected.id,
+        );
+        set({
+          penalties: Array.isArray(penalties) ? penalties : [],
+          selectedLoan: loanDetails,
+        });
+      }
+    } catch (err: any) {
+      set({
+        error: err.response?.data?.message || 'Failed to waive penalty',
+        actionLoading: false,
+      });
+    }
+  },
+
+  collectPenalty: async (penaltyId: number) => {
+    set({ actionLoading: true, error: null });
+    try {
+      await loanOfficerService.collectPenalty(penaltyId);
+      set({
+        actionLoading: false,
+        successMessage: 'Penalty marked as collected',
+      });
+      const selected = get().selectedLoan;
+      if (selected) {
+        const penalties = await loanOfficerService.getLoanPenalties(
+          selected.id,
+        );
+        set({ penalties: Array.isArray(penalties) ? penalties : [] });
+      }
+    } catch (err: any) {
+      set({
+        error: err.response?.data?.message || 'Failed to collect penalty',
+        actionLoading: false,
+      });
+    }
+  },
+
+  runPenaltyCheck: async () => {
+    set({ actionLoading: true, error: null });
+    try {
+      const result = await loanOfficerService.runPenaltyCheck();
+      set({
+        actionLoading: false,
+        successMessage: `Penalty check done — ${result.penaltiesCreated ?? 0} new, ${result.penaltiesUpdated ?? 0} updated`,
+      });
+      return result;
+    } catch (err: any) {
+      set({
+        error: err.response?.data?.message || 'Penalty check failed',
+        actionLoading: false,
       });
     }
   },

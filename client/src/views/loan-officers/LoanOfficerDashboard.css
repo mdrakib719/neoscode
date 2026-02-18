@@ -1014,3 +1014,154 @@
   color: #555;
   font-size: 12px;
 }
+
+/* ── Penalty Section ── */
+.lo-penalty-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.lo-penalty-header h3 {
+  margin: 0;
+}
+.lo-penalty-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.lo-penalty-rate {
+  font-size: 12px;
+  color: #666;
+  background: #f5f5f5;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+.lo-penalty-total {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c00;
+  background: #fff0f0;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid #f5b5b5;
+}
+.lo-penalty-empty {
+  padding: 12px 16px;
+  background: #f4fff4;
+  border: 1px solid #b0ddb0;
+  border-radius: 6px;
+  color: #1a5c1a;
+  font-size: 13px;
+}
+
+/* Penalty table row highlights */
+.lo-penalty-row-pending td {
+  background: #fff8e8;
+}
+.lo-penalty-row-waived td {
+  background: #f9f9f9;
+  color: #999;
+  text-decoration: line-through;
+  text-decoration-color: #ccc;
+}
+.lo-penalty-row-collected td {
+  background: #f4fff4;
+}
+
+.lo-penalty-amt {
+  font-weight: 700;
+  color: #c00;
+}
+
+/* Status badges for penalty */
+.lo-penalty-status-pending {
+  background: #fff0d0;
+  color: #7a4a00;
+  border: 1px solid #f0c060;
+}
+.lo-penalty-status-waived {
+  background: #f0f0f0;
+  color: #777;
+  border: 1px solid #ddd;
+}
+.lo-penalty-status-collected {
+  background: #d4f5d4;
+  color: #1a5c1a;
+  border: 1px solid #b0ddb0;
+}
+
+/* Waive / Collect action buttons */
+.lo-btn-waive {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #f0c060;
+  background: #fff8e0;
+  color: #7a4a00;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lo-btn-waive:hover {
+  background: #f0d080;
+}
+.lo-btn-collect {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #b0ddb0;
+  background: #e8ffe8;
+  color: #1a5c1a;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lo-btn-collect:hover {
+  background: #c0f0c0;
+}
+.lo-penalty-resolved {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Run Penalty Check button in header */
+.lo-btn-penalty-run {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lo-btn-penalty-run:hover {
+  background: #333;
+}
+.lo-btn-penalty-run:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Waive modal summary row */
+.lo-waive-summary {
+  display: flex;
+  gap: 24px;
+  padding: 12px 16px;
+  background: #fff8e0;
+  border: 1px solid #f0c060;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.lo-waive-summary label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 2px;
+}
