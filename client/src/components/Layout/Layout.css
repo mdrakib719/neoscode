@@ -45,6 +45,32 @@
   color: #ffffff;
 }
 
+.nav-link-active {
+  background: #ffffff;
+  color: #000000 !important;
+  font-weight: 700;
+}
+
+.nav-link-active:hover {
+  background: #e8e8e8;
+}
+
+.role-employee {
+  background: #f0f0f0;
+  color: #000;
+}
+
+.role-admin {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+}
+
+.role-customer {
+  background: #333;
+  color: #fff;
+}
+
 .navbar-user {
   display: flex;
   align-items: center;

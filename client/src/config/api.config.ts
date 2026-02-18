@@ -45,4 +45,42 @@ export const API_ENDPOINTS = {
   // Interest
   INTEREST_APPLY: '/interest/apply',
   INTEREST_SUMMARY: '/interest/summary',
+
+  // Staff (Bank Employees)
+  STAFF_CUSTOMERS: '/staff/accounts/customers',
+  STAFF_CUSTOMERS_SEARCH: '/staff/accounts/customers/search',
+  STAFF_CUSTOMER_DETAILS: (id: number) => `/staff/accounts/customers/${id}`,
+  STAFF_CUSTOMER_SUMMARY: (id: number) =>
+    `/staff/accounts/customers/${id}/summary`,
+  STAFF_CUSTOMER_ACCOUNTS: (id: number) =>
+    `/staff/accounts/customers/${id}/all-accounts`,
+  STAFF_CUSTOMER_TRANSACTIONS: (id: number) =>
+    `/staff/accounts/customers/${id}/transactions`,
+  STAFF_ACCOUNT_DETAILS: (id: number) => `/staff/accounts/${id}/details`,
+  STAFF_ACCOUNT_LIMITS: (id: number) => `/staff/accounts/${id}/limits`,
+  STAFF_ACCOUNT_FREEZE: (id: number) => `/staff/accounts/${id}/freeze`,
+  STAFF_ACCOUNT_UNFREEZE: (id: number) => `/staff/accounts/${id}/unfreeze`,
+  STAFF_ACCOUNT_TRANSACTIONS: (id: number) =>
+    `/staff/accounts/${id}/transactions`,
+  STAFF_DEPOSIT: '/staff/accounts/deposit',
+  STAFF_WITHDRAW: '/staff/accounts/withdraw',
+  STAFF_TRANSFER: '/staff/accounts/transfer',
+
+  // Loan Officers
+  LO_LOANS: '/loan-officers/loans',
+  LO_LOANS_PENDING: '/loan-officers/loans/pending',
+  LO_LOANS_APPROVED: '/loan-officers/loans/approved',
+  LO_LOAN_DETAILS: (id: number) => `/loan-officers/loans/${id}`,
+  LO_LOAN_REPAYMENT_SCHEDULE: (id: number) =>
+    `/loan-officers/loans/${id}/repayment-schedule`,
+  LO_LOAN_PAYMENT_HISTORY: (id: number) =>
+    `/loan-officers/loans/${id}/payment-history`,
+  LO_LOAN_APPROVE: (id: number) => `/loan-officers/loans/${id}/approve`,
+  LO_LOAN_REJECT: (id: number) => `/loan-officers/loans/${id}/reject`,
+  LO_LOAN_PROCESS_PAYMENT: (id: number) =>
+    `/loan-officers/loans/${id}/process-payment`,
+  LO_LOAN_REMARKS: (id: number) => `/loan-officers/loans/${id}/remarks`,
+  LO_DASHBOARD: '/loan-officers/dashboard/overview',
+  LO_OVERDUE: '/loan-officers/dashboard/overdue',
+  LO_SEARCH_CUSTOMER: '/loan-officers/search/customer',
 };

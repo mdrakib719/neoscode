@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../controllers/auth.controller';
 import { useAccountStore } from '../../controllers/account.controller';
 import { useTransactionStore } from '../../controllers/transaction.controller';
@@ -15,11 +16,20 @@ export const Dashboard: React.FC = () => {
   const { transactions, fetchTransactions } = useTransactionStore();
   const { loans, fetchLoans } = useLoanStore();
 
+  const isEmployee = user?.role === 'EMPLOYEE';
+
   useEffect(() => {
-    fetchAccounts();
-    fetchTransactions();
-    fetchLoans();
-  }, []);
+    if (!isEmployee) {
+      fetchAccounts();
+      fetchTransactions();
+      fetchLoans();
+    }
+  }, [isEmployee]);
+
+  // Redirect employees to their dedicated dashboard (after hooks)
+  if (isEmployee) {
+    return <Navigate to="/staff" replace />;
+  }
 
   const totalBalance = accounts.reduce(
     (sum, acc) => sum + parseFloat(String(acc.balance)),
@@ -31,8 +41,82 @@ export const Dashboard: React.FC = () => {
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>Welcome, {user?.name}!</h1>
-        <p>Manage your accounts, transactions, and loans</p>
+        <p>
+          {user?.role === 'ADMIN'
+            ? 'System Administrator — Full access to all modules'
+            : 'Manage your accounts, transactions, and loans'}
+        </p>
       </div>
+
+      {/* Admin quick links to employee dashboards */}
+      {user?.role === 'ADMIN' && (
+        <div className="grid grid-4" style={{ marginBottom: 24 }}>
+          <Link to="/staff" style={{ textDecoration: 'none' }}>
+            <div
+              className="summary-card"
+              style={{ cursor: 'pointer', border: '2px solid #000' }}
+            >
+              <div className="summary-icon" style={{ background: '#000' }}>
+                🏦
+              </div>
+              <div>
+                <p className="summary-label">Staff Panel</p>
+                <h2 className="summary-value" style={{ fontSize: 16 }}>
+                  Customer Ops
+                </h2>
+              </div>
+            </div>
+          </Link>
+          <Link to="/loan-officers" style={{ textDecoration: 'none' }}>
+            <div
+              className="summary-card"
+              style={{ cursor: 'pointer', border: '2px solid #000' }}
+            >
+              <div className="summary-icon" style={{ background: '#333' }}>
+                📋
+              </div>
+              <div>
+                <p className="summary-label">Loan Officer</p>
+                <h2 className="summary-value" style={{ fontSize: 16 }}>
+                  Loan Mgmt
+                </h2>
+              </div>
+            </div>
+          </Link>
+          <Link to="/admin" style={{ textDecoration: 'none' }}>
+            <div
+              className="summary-card"
+              style={{ cursor: 'pointer', border: '1px solid #e0e0e0' }}
+            >
+              <div className="summary-icon" style={{ background: '#555' }}>
+                ⚙
+              </div>
+              <div>
+                <p className="summary-label">Admin Panel</p>
+                <h2 className="summary-value" style={{ fontSize: 16 }}>
+                  System Config
+                </h2>
+              </div>
+            </div>
+          </Link>
+          <Link to="/accounts" style={{ textDecoration: 'none' }}>
+            <div
+              className="summary-card"
+              style={{ cursor: 'pointer', border: '1px solid #e0e0e0' }}
+            >
+              <div className="summary-icon" style={{ background: '#777' }}>
+                💳
+              </div>
+              <div>
+                <p className="summary-label">Accounts</p>
+                <h2 className="summary-value" style={{ fontSize: 16 }}>
+                  All Accounts
+                </h2>
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-4">

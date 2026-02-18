@@ -8,6 +8,8 @@ import { Accounts } from './views/accounts/Accounts';
 import { Transactions } from './views/transactions/Transactions';
 import { Loans } from './views/loans/Loans';
 import { Profile } from './views/profile/Profile';
+import { StaffDashboard } from './views/staff/StaffDashboard';
+import { LoanOfficerDashboard } from './views/loan-officers/LoanOfficerDashboard';
 import { Layout } from './components/Layout/Layout';
 import { useAuthStore } from './controllers/auth.controller';
 import './index.css';
@@ -17,6 +19,16 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+};
+
+const EmployeeRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (user?.role !== 'EMPLOYEE' && user?.role !== 'ADMIN')
+    return <Navigate to="/dashboard" />;
+  return <>{children}</>;
 };
 
 function App() {
@@ -41,6 +53,23 @@ function App() {
           <Route path="transactions" element={<Transactions />} />
           <Route path="loans" element={<Loans />} />
           <Route path="admin" element={<AdminPanel />} />
+          {/* Employee-only routes */}
+          <Route
+            path="staff"
+            element={
+              <EmployeeRoute>
+                <StaffDashboard />
+              </EmployeeRoute>
+            }
+          />
+          <Route
+            path="loan-officers"
+            element={
+              <EmployeeRoute>
+                <LoanOfficerDashboard />
+              </EmployeeRoute>
+            }
+          />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" />} />

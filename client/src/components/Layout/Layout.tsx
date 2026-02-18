@@ -1,16 +1,24 @@
 import React from 'react';
-import { Link, useNavigate, Outlet } from 'react-router-dom';
+import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../controllers/auth.controller';
 import './Layout.css';
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
+
+  const isEmployee = user?.role === 'EMPLOYEE' || user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'ADMIN';
+  const isCustomer = user?.role === 'CUSTOMER';
+
+  const navLinkClass = (path: string) =>
+    `nav-link${location.pathname === path || location.pathname.startsWith(path + '/') ? ' nav-link-active' : ''}`;
 
   return (
     <div className="layout">
@@ -20,32 +28,68 @@ export const Layout: React.FC = () => {
         </div>
 
         <div className="navbar-menu">
-          <Link to="/dashboard" className="nav-link">
+          <Link to="/dashboard" className={navLinkClass('/dashboard')}>
             Dashboard
           </Link>
-          <Link to="/profile" className="nav-link">
+          <Link to="/profile" className={navLinkClass('/profile')}>
             Profile
           </Link>
-          <Link to="/accounts" className="nav-link">
-            Accounts
-          </Link>
-          <Link to="/transactions" className="nav-link">
-            Transactions
-          </Link>
-          <Link to="/loans" className="nav-link">
-            Loans
-          </Link>
 
-          {user?.role === 'ADMIN' && (
-            <Link to="/admin" className="nav-link">
-              Admin
+          {/* Customer navigation */}
+          {isCustomer && (
+            <>
+              <Link to="/accounts" className={navLinkClass('/accounts')}>
+                Accounts
+              </Link>
+              <Link
+                to="/transactions"
+                className={navLinkClass('/transactions')}
+              >
+                Transactions
+              </Link>
+              <Link to="/loans" className={navLinkClass('/loans')}>
+                Loans
+              </Link>
+            </>
+          )}
+
+          {/* Employee / Staff navigation */}
+          {isEmployee && (
+            <>
+              <Link to="/staff" className={navLinkClass('/staff')}>
+                🏦 Staff Panel
+              </Link>
+              <Link
+                to="/loan-officers"
+                className={navLinkClass('/loan-officers')}
+              >
+                📋 Loan Officer
+              </Link>
+              <Link to="/accounts" className={navLinkClass('/accounts')}>
+                Accounts
+              </Link>
+              <Link
+                to="/transactions"
+                className={navLinkClass('/transactions')}
+              >
+                Transactions
+              </Link>
+            </>
+          )}
+
+          {/* Admin only */}
+          {isAdmin && (
+            <Link to="/admin" className={navLinkClass('/admin')}>
+              ⚙ Admin
             </Link>
           )}
         </div>
 
         <div className="navbar-user">
           <span className="user-name">{user?.name}</span>
-          <span className="user-role">{user?.role}</span>
+          <span className={`user-role role-${user?.role?.toLowerCase()}`}>
+            {user?.role}
+          </span>
           <button onClick={handleLogout} className="btn btn-secondary btn-sm">
             Logout
           </button>
