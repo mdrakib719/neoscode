@@ -329,7 +329,7 @@ This script automatically:
 3. Installs backend `node_modules` if missing
 4. Installs frontend `node_modules` if missing
 5. Starts the NestJS API on **http://localhost:3001/api**
-6. Starts the React dev server on **http://localhost:5173**
+6. Starts the React dev server on **http://localhost:3000**
 
 ---
 
