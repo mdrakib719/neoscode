@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: 'ADMIN' | 'EMPLOYEE' | 'CUSTOMER';
+  two_factor_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -41,9 +42,14 @@ export interface Transaction {
   from_account_id?: number;
   to_account_id?: number;
   amount: number;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER';
-  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'EXTERNAL_TRANSFER' | 'REVERSAL';
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REVERSED';
   description?: string;
+  transfer_type?: 'INTERNAL' | 'EXTERNAL' | null;
+  external_bank_name?: string;
+  external_account_number?: string;
+  external_beneficiary_name?: string;
+  external_ifsc_code?: string;
   created_at: string;
   from_account?: Account;
   to_account?: Account;
@@ -150,9 +156,14 @@ export interface WithdrawRequest {
 
 export interface TransferRequest {
   fromAccountNumber: string;
-  toAccountNumber: string;
+  toAccountNumber?: string;
   amount: number;
   description?: string;
+  isExternal?: boolean;
+  externalBankName?: string;
+  externalAccountNumber?: string;
+  externalBeneficiaryName?: string;
+  externalIfscCode?: string;
 }
 
 export interface LoanApplicationRequest {

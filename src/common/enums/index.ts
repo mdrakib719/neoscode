@@ -16,6 +16,7 @@ export enum TransactionType {
   DEPOSIT = 'DEPOSIT',
   WITHDRAW = 'WITHDRAW',
   TRANSFER = 'TRANSFER',
+  EXTERNAL_TRANSFER = 'EXTERNAL_TRANSFER',
   REVERSAL = 'REVERSAL',
 }
 
@@ -38,4 +39,10 @@ export enum LoanType {
   HOME = 'HOME',
   VEHICLE = 'VEHICLE',
   EDUCATION = 'EDUCATION',
+}
+
+export enum LoanPenaltyStatus {
+  PENDING = 'PENDING',
+  COLLECTED = 'COLLECTED',
+  WAIVED = 'WAIVED',
 }

@@ -4,13 +4,20 @@ import { LoansController } from './loans.controller';
 import { LoansService } from './loans.service';
 import { Loan } from './entities/loan.entity';
 import { LoanPayment } from './entities/loan-payment.entity';
+import { LoanPenalty } from './entities/loan-penalty.entity';
 import { Account } from '@/accounts/entities/account.entity';
 import { Transaction } from '@/transactions/entities/transaction.entity';
 import { AuthModule } from '@/auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Loan, LoanPayment, Account, Transaction]),
+    TypeOrmModule.forFeature([
+      Loan,
+      LoanPayment,
+      LoanPenalty,
+      Account,
+      Transaction,
+    ]),
     AuthModule,
   ],
   controllers: [LoansController],

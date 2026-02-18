@@ -71,3 +71,42 @@
 .demo-credentials strong {
   color: #000000;
 }
+
+/* ─── 2FA login step ─────────────────────────────────────────────────────── */
+.tfa-icon {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.tfa-code-input {
+  text-align: center;
+  font-size: 1.8rem;
+  letter-spacing: 0.5em;
+  font-family: 'Courier New', monospace;
+  padding: 0.75rem;
+}
+
+.form-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: #999;
+  margin-top: 0.4rem;
+}
+
+.tfa-back-link {
+  display: block;
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+  text-align: center;
+  width: 100%;
+  padding: 0;
+}
+
+.tfa-back-link:hover {
+  text-decoration: underline;
+}

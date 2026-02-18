@@ -64,4 +64,33 @@ export const transactionService = {
   async transfer(data: TransferRequest): Promise<Transaction> {
     return apiClient.post<Transaction>(API_ENDPOINTS.TRANSFER, data);
   },
+
+  async validateAccount(
+    accountNumber: string,
+  ): Promise<{
+    found: boolean;
+    account_number: string;
+    account_type: string;
+    holder: string;
+  }> {
+    return apiClient.post(API_ENDPOINTS.VALIDATE_ACCOUNT, { accountNumber });
+  },
+
+  async getBeneficiaries(): Promise<any[]> {
+    return apiClient.get(API_ENDPOINTS.BENEFICIARIES);
+  },
+
+  async addBeneficiary(data: {
+    beneficiary_name: string;
+    account_number: string;
+    bank_name?: string;
+    ifsc_code?: string;
+    notes?: string;
+  }): Promise<any> {
+    return apiClient.post(API_ENDPOINTS.BENEFICIARIES, data);
+  },
+
+  async deleteBeneficiary(id: number): Promise<void> {
+    return apiClient.delete(API_ENDPOINTS.BENEFICIARY(id));
+  },
 };

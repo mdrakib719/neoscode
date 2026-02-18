@@ -6,6 +6,11 @@ export const API_ENDPOINTS = {
   REGISTER: '/auth/register',
   LOGIN: '/auth/login',
   LOGOUT: '/auth/logout',
+  // 2FA
+  TWO_FA_GENERATE: '/auth/2fa/generate',
+  TWO_FA_ENABLE: '/auth/2fa/enable',
+  TWO_FA_DISABLE: '/auth/2fa/disable',
+  TWO_FA_VERIFY: '/auth/2fa/verify',
 
   // Users
   PROFILE: '/users/profile',
@@ -26,6 +31,9 @@ export const API_ENDPOINTS = {
     `/transactions/deposit-requests/${id}/reject`,
   WITHDRAW: '/transactions/withdraw',
   TRANSFER: '/transactions/transfer',
+  VALIDATE_ACCOUNT: '/transactions/validate-account',
+  BENEFICIARIES: '/transactions/beneficiaries',
+  BENEFICIARY: (id: number) => `/transactions/beneficiaries/${id}`,
 
   // Loans
   LOANS: '/loans',
@@ -38,11 +46,60 @@ export const API_ENDPOINTS = {
 
   // Reports
   REPORTS_MONTHLY: '/reports/monthly-statement',
+  REPORTS_USER_ACCOUNTS: '/reports/user-accounts',
   REPORTS_ACCOUNT_SUMMARY: '/reports/account-summary',
   REPORTS_LOAN_SUMMARY: '/reports/loan-summary',
   REPORTS_SYSTEM: '/reports/system-report',
+  REPORTS_PDF_STATEMENT: '/reports/pdf/statement',
+  REPORTS_PDF_LOAN: '/reports/pdf/loan-summary',
 
   // Interest
   INTEREST_APPLY: '/interest/apply',
   INTEREST_SUMMARY: '/interest/summary',
+
+  // Staff (Bank Employees)
+  STAFF_CUSTOMERS: '/staff/accounts/customers',
+  STAFF_CUSTOMERS_SEARCH: '/staff/accounts/customers/search',
+  STAFF_CUSTOMER_DETAILS: (id: number) => `/staff/accounts/customers/${id}`,
+  STAFF_CUSTOMER_SUMMARY: (id: number) =>
+    `/staff/accounts/customers/${id}/summary`,
+  STAFF_CUSTOMER_ACCOUNTS: (id: number) =>
+    `/staff/accounts/customers/${id}/all-accounts`,
+  STAFF_CUSTOMER_TRANSACTIONS: (id: number) =>
+    `/staff/accounts/customers/${id}/transactions`,
+  STAFF_ACCOUNT_DETAILS: (id: number) => `/staff/accounts/${id}/details`,
+  STAFF_ACCOUNT_LIMITS: (id: number) => `/staff/accounts/${id}/limits`,
+  STAFF_ACCOUNT_FREEZE: (id: number) => `/staff/accounts/${id}/freeze`,
+  STAFF_ACCOUNT_UNFREEZE: (id: number) => `/staff/accounts/${id}/unfreeze`,
+  STAFF_ACCOUNT_TRANSACTIONS: (id: number) =>
+    `/staff/accounts/${id}/transactions`,
+  STAFF_DEPOSIT: '/staff/accounts/deposit',
+  STAFF_WITHDRAW: '/staff/accounts/withdraw',
+  STAFF_TRANSFER: '/staff/accounts/transfer',
+
+  // Loan Officers
+  LO_LOANS: '/loan-officers/loans',
+  LO_LOANS_PENDING: '/loan-officers/loans/pending',
+  LO_LOANS_APPROVED: '/loan-officers/loans/approved',
+  LO_LOAN_DETAILS: (id: number) => `/loan-officers/loans/${id}`,
+  LO_LOAN_REPAYMENT_SCHEDULE: (id: number) =>
+    `/loan-officers/loans/${id}/repayment-schedule`,
+  LO_LOAN_PAYMENT_HISTORY: (id: number) =>
+    `/loan-officers/loans/${id}/payment-history`,
+  LO_LOAN_PENALTIES: (id: number) => `/loan-officers/loans/${id}/penalties`,
+  LO_LOAN_APPROVE: (id: number) => `/loan-officers/loans/${id}/approve`,
+  LO_LOAN_REJECT: (id: number) => `/loan-officers/loans/${id}/reject`,
+  LO_LOAN_PROCESS_PAYMENT: (id: number) =>
+    `/loan-officers/loans/${id}/process-payment`,
+  LO_LOAN_REMARKS: (id: number) => `/loan-officers/loans/${id}/remarks`,
+  LO_DASHBOARD: '/loan-officers/dashboard/overview',
+  LO_OVERDUE: '/loan-officers/dashboard/overdue',
+  LO_SEARCH_CUSTOMER: '/loan-officers/search/customer',
+
+  // Penalty
+  PENALTY_RUN: '/penalty/run',
+  PENALTY_SUMMARY: '/penalty/summary',
+  PENALTY_LOAN: (loanId: number) => `/penalty/loan/${loanId}`,
+  PENALTY_WAIVE: (id: number) => `/penalty/${id}/waive`,
+  PENALTY_COLLECT: (id: number) => `/penalty/${id}/collect`,
 };

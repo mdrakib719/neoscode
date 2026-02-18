@@ -21,6 +21,11 @@ export class ReportsController {
     return this.reportsService.getMonthlyStatement(+accountId, +year, +month);
   }
 
+  @Get('user-accounts')
+  getUserAccounts(@GetUser('userId') userId: number) {
+    return this.reportsService.getUserAccounts(userId);
+  }
+
   @Get('account-summary')
   getAccountSummary(@GetUser('userId') userId: number) {
     return this.reportsService.getAccountSummary(userId);

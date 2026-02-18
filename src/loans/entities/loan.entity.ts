@@ -42,6 +42,22 @@ export class Loan {
   @Column({ type: 'int', default: 0 })
   paid_installments: number;
 
+  /** Grace period in days before penalty kicks in (default 5 days) */
+  @Column({ type: 'int', default: 5 })
+  grace_period_days: number;
+
+  /**
+   * Penalty rate as % per month, applied daily.
+   * Daily rate = penalty_rate / 30
+   * Default: 2% per month
+   */
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 2.0 })
+  penalty_rate: number;
+
+  /** Running total of all accrued penalties on this loan */
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+  total_penalty: number;
+
   @Column({
     type: 'enum',
     enum: LoanStatus,

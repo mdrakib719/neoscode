@@ -74,7 +74,7 @@ export const useAdminStore = create<AdminState>((set) => ({
     try {
       const response = await adminService.getAllUsers();
       console.log('getAllUsers response:', response);
-      set({ users: response || [], loading: false });
+      set({ users: (response as any[]) || [], loading: false });
     } catch (error: any) {
       console.error('getAllUsers error:', error);
       set({
@@ -172,7 +172,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   getAllAccounts: async (page = 1) => {
     set({ loading: true, error: null });
     try {
-      const response = await adminService.getAllAccounts(page);
+      const response = (await adminService.getAllAccounts(page)) as any;
       console.log('getAllAccounts response:', response);
       set({ accounts: response.accounts || [], loading: false });
     } catch (error: any) {
@@ -230,7 +230,10 @@ export const useAdminStore = create<AdminState>((set) => ({
   getAllTransactions: async (page = 1, status) => {
     set({ loading: true, error: null });
     try {
-      const response = await adminService.getAllTransactions(page, status);
+      const response = (await adminService.getAllTransactions(
+        page,
+        status,
+      )) as any;
       console.log('getAllTransactions response:', response);
       set({ transactions: response.transactions || [], loading: false });
     } catch (error: any) {
@@ -288,7 +291,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   getSystemConfig: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await adminService.getSystemConfig();
+      const response = (await adminService.getSystemConfig()) as any;
       console.log('getSystemConfig response:', response);
       set({
         systemConfig: response.configurations || {},
@@ -349,7 +352,11 @@ export const useAdminStore = create<AdminState>((set) => ({
   getAuditLogs: async (page = 1, userId, action) => {
     set({ loading: true, error: null });
     try {
-      const response = await adminService.getAuditLogs(page, userId, action);
+      const response = (await adminService.getAuditLogs(
+        page,
+        userId,
+        action,
+      )) as any;
       console.log('getAuditLogs response:', response);
       set({ auditLogs: response.logs || [], loading: false });
     } catch (error: any) {
@@ -364,9 +371,8 @@ export const useAdminStore = create<AdminState>((set) => ({
   getLoginActivity: async (days = 7) => {
     set({ loading: true, error: null });
     try {
-      const response = await adminService.getLoginActivity(days);
+      await adminService.getLoginActivity(days);
       set({ loading: false });
-      return response;
     } catch (error: any) {
       set({
         error:
@@ -380,9 +386,8 @@ export const useAdminStore = create<AdminState>((set) => ({
   getSuspiciousActivity: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await adminService.getSuspiciousActivity();
+      await adminService.getSuspiciousActivity();
       set({ loading: false });
-      return response;
     } catch (error: any) {
       set({
         error:
