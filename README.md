@@ -298,11 +298,11 @@ PORT=3001
 NODE_ENV=development
 
 # ─── Database ──────────────────────────────────────────────
-DB_HOST=localhost
-DB_PORT=3307
-DB_USERNAME=root
-DB_PASSWORD=your_mysql_password
-DB_DATABASE=banking_system
+DB_HOST=sql12.freesqldatabase.com
+DB_PORT=3306
+DB_USERNAME=sql12817522
+DB_PASSWORD=BMMtdwFMxD
+DB_DATABASE=sql12817522
 
 # ─── JWT ───────────────────────────────────────────────────
 JWT_SECRET=your-super-secret-jwt-key-min-32-chars
