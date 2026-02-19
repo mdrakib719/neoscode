@@ -48,7 +48,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         AuditLog,
       ],
       synchronize: false,
-      logging: !isProduction && !isVercel,
+      logging: false,
       // Serverless-friendly connection settings
       extra: {
         connectionLimit: isVercel || isProduction ? 2 : 10,

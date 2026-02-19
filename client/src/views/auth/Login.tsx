@@ -148,8 +148,9 @@ export const Login: React.FC = () => {
           <p>
             <strong>Demo Accounts:</strong>
           </p>
-          <p>Customer: customer@banking.com / password123</p>
-          <p>Admin: admin@banking.com / password123</p>
+          <p>Customer: test@gmail.com Password: You@@123</p>
+          <p>Admin: rakibiislam@gmail.com Password: You@@123</p>
+          <p>Employee: employee@gmail.com Password: You@@123</p>
         </div>
       </div>
     </div>
