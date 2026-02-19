@@ -89,11 +89,11 @@ bash start.sh          # installs deps, seeds DB, starts API + frontend
 
 ```dotenv
 PORT=3001
-DB_HOST=localhost
+DB_HOST=sql12.freesqldatabase.com
 DB_PORT=3306
-DB_USERNAME=root
-DB_PASSWORD=yourpassword
-DB_DATABASE=banking_system
+DB_USERNAME=sql12817522
+DB_PASSWORD=BMMtdwFMxD
+DB_DATABASE=sql12817522
 JWT_SECRET=your-super-secret-jwt-key-min-32-chars
 JWT_EXPIRATION=24h
 REDIS_HOST=localhost
@@ -143,16 +143,6 @@ node scripts/update-passwords.js
 #### Logout
 
 Click your profile or the **Logout** button in the sidebar navigation.
-
----
-
-### Role Overview
-
-| Role     | Default Landing Page         | Access                                                            |
-| -------- | ---------------------------- | ----------------------------------------------------------------- |
-| Admin    | `/dashboard`                 | All modules + Admin Panel                                         |
-| Employee | `/staff` or `/loan-officers` | Staff Dashboard, Loan Officer Dashboard                           |
-| Customer | `/dashboard`                 | Accounts, Transactions, Loans, Profile, Statements, Notifications |
 
 ---
 
