@@ -189,7 +189,7 @@ This script:
 2. Creates and seeds the database if it does not exist
 3. Installs all dependencies if missing
 4. Starts the NestJS API on **http://localhost:3001/api**
-5. Starts the React frontend on **http://localhost:5173**
+5. Starts the React frontend on **http://localhost:3000**
 
 ### Manual start
 
@@ -204,7 +204,7 @@ cd client && npm run dev
 | Service     | URL                       |
 | ----------- | ------------------------- |
 | Backend API | http://localhost:3001/api |
-| Frontend    | http://localhost:5173     |
+| Frontend    | http://localhost:3000     |
 
 ---
 
@@ -214,7 +214,7 @@ cd client && npm run dev
 
 | Role     | Name          | Email                | Notes                  |
 | -------- | ------------- | -------------------- | ---------------------- |
-| Admin    | admin         | admin@banking.com    |                        |
+| Admin    | admin         | admin@banking.com    | All access             |
 | Employee | rakib         | rakib@gmail.com      | Staff + Loan Officer   |
 | Customer | Test Customer | customer@banking.com |                        |
 | Customer | test          | test@gmail.com       |                        |
@@ -1683,7 +1683,7 @@ redis-cli TTL "token_blacklist:SOMEHASH"    # seconds remaining
 
 ## 16. Frontend UI Guide
 
-Open **http://localhost:5173** in your browser.
+Open **http://localhost:3000** in your browser.
 
 ### Page routes
 
@@ -1796,10 +1796,10 @@ lsof -i :3001
 kill -9 <PID>
 ```
 
-### Port 5173 already in use (frontend)
+### Port 3000 already in use (frontend)
 
 ```bash
-lsof -i :5173
+lsof -i :3000
 kill -9 <PID>
 ```
 
@@ -1885,4 +1885,4 @@ SELECT fn_get_account_balance(1) AS balance;
 ---
 
 > Last updated: **February 19, 2026**  
-> Backend port: **3001** · Frontend port: **5173** · Database: **banking_system**
+> Backend port: **3001** · Frontend port: **3000** · Database: **banking_system**
