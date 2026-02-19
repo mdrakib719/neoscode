@@ -32,12 +32,12 @@ USE banking_system;
 
 CREATE TABLE `accounts` (
   `id` int(11) NOT NULL,
-  `account_number` varchar(255) NOT NULL,
+  `account_number` varchar(191) NOT NULL,
   `account_type` enum('SAVINGS','CHECKING','LOAN','FIXED_DEPOSIT','RECURRING_DEPOSIT') NOT NULL DEFAULT 'SAVINGS',
   `balance` decimal(15,2) NOT NULL DEFAULT 0.00,
   `user_id` int(11) NOT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL,
   `currency` varchar(255) NOT NULL DEFAULT 'USD',
   `isFrozen` tinyint(4) NOT NULL DEFAULT 0,
   `frozen_at` timestamp NULL DEFAULT NULL,
@@ -86,8 +86,8 @@ CREATE TABLE `account_deletion_requests` (
   `admin_remarks` text DEFAULT NULL,
   `processed_by` int(11) DEFAULT NULL,
   `processed_at` timestamp NULL DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -112,7 +112,7 @@ CREATE TABLE `audit_logs` (
   `action` varchar(255) NOT NULL,
   `resource` varchar(255) NOT NULL,
   `ip_address` varchar(255) NOT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -182,8 +182,8 @@ CREATE TABLE `beneficiaries` (
   `ifsc_code` varchar(255) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `is_active` tinyint(4) NOT NULL DEFAULT 1,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -209,8 +209,8 @@ CREATE TABLE `deposit_requests` (
   `admin_remarks` text DEFAULT NULL,
   `approved_by` int(11) DEFAULT NULL,
   `processed_at` timestamp NULL DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -238,8 +238,8 @@ CREATE TABLE `loans` (
   `emi_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
   `status` enum('PENDING','APPROVED','REJECTED','CLOSED') NOT NULL DEFAULT 'PENDING',
   `remarks` text DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL,
   `remaining_balance` decimal(15,2) NOT NULL DEFAULT 0.00,
   `paid_installments` int(11) NOT NULL DEFAULT 0,
   `grace_period_days` int(11) NOT NULL DEFAULT 5,
@@ -275,7 +275,7 @@ CREATE TABLE `loan_payments` (
   `due_date` date NOT NULL,
   `paid_date` date DEFAULT NULL,
   `remarks` text DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -305,8 +305,8 @@ CREATE TABLE `loan_penalties` (
   `penalty_start_date` date DEFAULT NULL,
   `resolved_date` date DEFAULT NULL,
   `remarks` text DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -326,8 +326,8 @@ CREATE TABLE `notifications` (
   `read_at` timestamp NULL DEFAULT NULL,
   `is_sent` tinyint(4) NOT NULL DEFAULT 0,
   `sent_at` timestamp NULL DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL,
   `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -348,12 +348,12 @@ INSERT INTO `notifications` (`id`, `user_id`, `type`, `channel`, `title`, `messa
 
 CREATE TABLE `system_config` (
   `id` int(11) NOT NULL,
-  `key` varchar(255) NOT NULL,
+  `key` varchar(191) NOT NULL,
   `value` text NOT NULL,
   `category` varchar(255) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -392,7 +392,7 @@ CREATE TABLE `token_blacklist` (
   `type` varchar(20) NOT NULL DEFAULT 'logout',
   `reason` text DEFAULT NULL,
   `expires_at` datetime NOT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -422,7 +422,7 @@ CREATE TABLE `transactions` (
   `type` enum('DEPOSIT','WITHDRAW','TRANSFER','EXTERNAL_TRANSFER','REVERSAL') NOT NULL,
   `status` enum('PENDING','COMPLETED','FAILED','REVERSED') NOT NULL DEFAULT 'PENDING',
   `description` text DEFAULT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
   `transfer_type` varchar(20) DEFAULT NULL,
   `external_bank_name` varchar(255) DEFAULT NULL,
   `external_account_number` varchar(255) DEFAULT NULL,
@@ -478,11 +478,11 @@ INSERT INTO `transactions` (`id`, `from_account_id`, `to_account_id`, `amount`, 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
+  `email` varchar(191) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('ADMIN','EMPLOYEE','CUSTOMER') NOT NULL DEFAULT 'CUSTOMER',
-  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp,
+  `updated_at` datetime DEFAULT NULL,
   `isActive` tinyint(4) NOT NULL DEFAULT 1,
   `isLocked` tinyint(4) NOT NULL DEFAULT 0,
   `locked_at` timestamp NULL DEFAULT NULL,
@@ -518,7 +518,7 @@ CREATE TABLE `view_account_summary` (
 ,`user_id` int(11)
 ,`user_name` varchar(255)
 ,`user_email` varchar(255)
-,`created_at` datetime(6)
+,`created_at` datetime
 );
 
 -- --------------------------------------------------------
@@ -535,7 +535,7 @@ CREATE TABLE `view_loan_summary` (
 ,`tenure_months` int(11)
 ,`emi_amount` decimal(15,2)
 ,`status` enum('PENDING','APPROVED','REJECTED','CLOSED')
-,`created_at` datetime(6)
+,`created_at` datetime
 ,`user_id` int(11)
 ,`user_name` varchar(255)
 ,`user_email` varchar(255)
@@ -554,7 +554,7 @@ CREATE TABLE `view_transaction_summary` (
 ,`amount` decimal(15,2)
 ,`status` enum('PENDING','COMPLETED','FAILED','REVERSED')
 ,`description` text
-,`created_at` datetime(6)
+,`created_at` datetime
 ,`from_account` varchar(255)
 ,`to_account` varchar(255)
 ,`from_user` varchar(255)
@@ -566,27 +566,6 @@ CREATE TABLE `view_transaction_summary` (
 --
 -- Structure for view `view_account_summary`
 --
-DROP TABLE IF EXISTS `view_account_summary`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_account_summary`  AS SELECT `a`.`id` AS `account_id`, `a`.`account_number` AS `account_number`, `a`.`account_type` AS `account_type`, `a`.`balance` AS `balance`, `a`.`currency` AS `currency`, `u`.`id` AS `user_id`, `u`.`name` AS `user_name`, `u`.`email` AS `user_email`, `a`.`created_at` AS `created_at` FROM (`accounts` `a` join `users` `u` on(`a`.`user_id` = `u`.`id`)) ;
-
--- --------------------------------------------------------
-
---
--- Structure for view `view_loan_summary`
---
-DROP TABLE IF EXISTS `view_loan_summary`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_loan_summary`  AS SELECT `l`.`id` AS `loan_id`, `l`.`loan_type` AS `loan_type`, `l`.`amount` AS `amount`, `l`.`interest_rate` AS `interest_rate`, `l`.`tenure_months` AS `tenure_months`, `l`.`emi_amount` AS `emi_amount`, `l`.`status` AS `status`, `l`.`created_at` AS `created_at`, `u`.`id` AS `user_id`, `u`.`name` AS `user_name`, `u`.`email` AS `user_email`, `l`.`amount`+ `l`.`amount` * `l`.`interest_rate` * `l`.`tenure_months` / 1200 AS `total_payable` FROM (`loans` `l` join `users` `u` on(`l`.`user_id` = `u`.`id`)) ;
-
--- --------------------------------------------------------
-
---
--- Structure for view `view_transaction_summary`
---
-DROP TABLE IF EXISTS `view_transaction_summary`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_transaction_summary`  AS SELECT `t`.`id` AS `transaction_id`, `t`.`type` AS `type`, `t`.`amount` AS `amount`, `t`.`status` AS `status`, `t`.`description` AS `description`, `t`.`created_at` AS `created_at`, `fa`.`account_number` AS `from_account`, `ta`.`account_number` AS `to_account`, `fu`.`name` AS `from_user`, `tu`.`name` AS `to_user` FROM ((((`transactions` `t` left join `accounts` `fa` on(`t`.`from_account_id` = `fa`.`id`)) left join `accounts` `ta` on(`t`.`to_account_id` = `ta`.`id`)) left join `users` `fu` on(`fa`.`user_id` = `fu`.`id`)) left join `users` `tu` on(`ta`.`user_id` = `tu`.`id`)) ;
 
 --
 -- Indexes for dumped tables
