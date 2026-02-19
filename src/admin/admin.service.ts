@@ -13,7 +13,7 @@ import { Loan } from '@/loans/entities/loan.entity';
 import { SystemConfig } from './entities/system-config.entity';
 import { AuditLog } from './entities/audit-log.entity';
 import { TokenBlacklistService } from '@/auth/services/token-blacklist.service';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import {
   CreateEmployeeDto,
   ActivateUserDto,

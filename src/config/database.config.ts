@@ -23,6 +23,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const isVercel = !!process.env.VERCEL;
 
     return {
       type: 'mysql',
@@ -46,13 +47,16 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         SystemConfig,
         AuditLog,
       ],
-      synchronize: !isProduction,
-      logging: !isProduction,
+      synchronize: false,
+      logging: !isProduction && !isVercel,
       // Serverless-friendly connection settings
       extra: {
-        connectionLimit: isProduction ? 3 : 10,
+        connectionLimit: isVercel || isProduction ? 2 : 10,
+        connectTimeout: 20000,
       },
-      connectTimeout: 30000,
+      connectTimeout: 20000,
+      // Don't keep connections alive in serverless
+      ...(isVercel ? { keepConnectionAlive: false } : {}),
     };
   }
 }
