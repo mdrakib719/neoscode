@@ -2,10 +2,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { TransactionStatus } from '@/common/enums';
 import { Account } from '@/accounts/entities/account.entity';
@@ -56,9 +56,19 @@ export class DepositRequest {
   @JoinColumn({ name: 'approved_by' })
   admin: User;
 
-  @CreateDateColumn()
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
-  @UpdateDateColumn()
+  @Column({ type: 'timestamp', nullable: true })
   updated_at: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    if (!this.updated_at) this.updated_at = new Date();
+  }
+
+  @BeforeUpdate()
+  setUpdatedAt() {
+    this.updated_at = new Date();
+  }
 }

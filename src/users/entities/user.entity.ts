@@ -2,9 +2,9 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   OneToMany,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { UserRole } from '@/common/enums';
 import { Account } from '@/accounts/entities/account.entity';
@@ -19,7 +19,7 @@ export class User {
   @Column()
   name: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 191 })
   email: string;
 
   @Column()
@@ -58,9 +58,19 @@ export class User {
   @OneToMany(() => Loan, (loan) => loan.user)
   loans: Loan[];
 
-  @CreateDateColumn()
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
-  @UpdateDateColumn()
+  @Column({ type: 'timestamp', nullable: true })
   updated_at: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    if (!this.updated_at) this.updated_at = new Date();
+  }
+
+  @BeforeUpdate()
+  setUpdatedAt() {
+    this.updated_at = new Date();
+  }
 }

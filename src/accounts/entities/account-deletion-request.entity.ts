@@ -2,10 +2,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { Account } from './account.entity';
 import { User } from '@/users/entities/user.entity';
@@ -51,9 +51,19 @@ export class AccountDeletionRequest {
   @JoinColumn({ name: 'processed_by' })
   processor: User;
 
-  @CreateDateColumn()
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
-  @UpdateDateColumn()
+  @Column({ type: 'timestamp', nullable: true })
   updated_at: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    if (!this.updated_at) this.updated_at = new Date();
+  }
+
+  @BeforeUpdate()
+  setUpdatedAt() {
+    this.updated_at = new Date();
+  }
 }

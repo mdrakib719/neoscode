@@ -2,8 +2,8 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 
 @Entity('system_config')
@@ -11,7 +11,7 @@ export class SystemConfig {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 100 })
   key: string;
 
   @Column('text')
@@ -23,9 +23,19 @@ export class SystemConfig {
   @Column({ nullable: true })
   description: string;
 
-  @CreateDateColumn()
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
-  @UpdateDateColumn()
+  @Column({ type: 'timestamp', nullable: true })
   updated_at: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    if (!this.updated_at) this.updated_at = new Date();
+  }
+
+  @BeforeUpdate()
+  setUpdatedAt() {
+    this.updated_at = new Date();
+  }
 }

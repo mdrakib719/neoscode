@@ -2,10 +2,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { LoanPenaltyStatus } from '@/common/enums';
 import { Loan } from './loan.entity';
@@ -72,9 +72,19 @@ export class LoanPenalty {
   @JoinColumn({ name: 'loan_id' })
   loan: Loan;
 
-  @CreateDateColumn()
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
-  @UpdateDateColumn()
+  @Column({ type: 'timestamp', nullable: true })
   updated_at: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    if (!this.updated_at) this.updated_at = new Date();
+  }
+
+  @BeforeUpdate()
+  setUpdatedAt() {
+    this.updated_at = new Date();
+  }
 }

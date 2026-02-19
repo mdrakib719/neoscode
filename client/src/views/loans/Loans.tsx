@@ -3,6 +3,7 @@ import { loanController } from '../../controllers/loan.controller';
 import { useAccountStore } from '../../controllers/account.controller';
 import { Loan, NextEMIDetails } from '../../models/types';
 import { loanService } from '../../services/loan.service';
+import { API_BASE_URL } from '../../config/api.config';
 import './Loans.css';
 
 export const Loans: React.FC = () => {
@@ -122,14 +123,11 @@ export const Loans: React.FC = () => {
   const viewLoanDetails = async (loan: Loan) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:3001/loans/${loan.id}/summary`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await fetch(`${API_BASE_URL}/loans/${loan.id}/summary`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
       if (!response.ok) throw new Error('Failed to fetch loan details');
 

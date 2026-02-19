@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../controllers/auth.controller';
 import { accountController } from '../../controllers/account.controller';
 import { Account } from '../../models/types';
+import { API_BASE_URL } from '../../config/api.config';
 import './Profile.css';
 
 export const Profile: React.FC = () => {
@@ -52,7 +53,7 @@ export const Profile: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/accounts', {
+      const response = await fetch(`${API_BASE_URL}/accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,15 +101,12 @@ export const Profile: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:3001/api/accounts/${accountId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await fetch(`${API_BASE_URL}/accounts/${accountId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
       if (!response.ok) {
         const error = await response.json();

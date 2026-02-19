@@ -14,9 +14,9 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS
+  // Enable CORS for all origins (works both locally and online)
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    origin: true,
     credentials: true,
   });
 
@@ -24,7 +24,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT || 3001;
-  await app.listen(port);
-  console.log(`🚀 Banking System API running on http://localhost:${port}/api`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Banking System API running on port ${port}`);
 }
 bootstrap();

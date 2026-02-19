@@ -3,6 +3,7 @@ import { useAdminStore } from '../../controllers/admin.controller';
 import { useAuthStore } from '../../controllers/auth.controller';
 import { useLoanStore } from '../../controllers/loan.controller';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../config/api.config';
 import './AdminPanel.css';
 
 export const AdminPanel = () => {
@@ -120,7 +121,7 @@ export const AdminPanel = () => {
       setDepositRequestsLoading(true);
       const token = localStorage.getItem('token');
       const response = await fetch(
-        'http://localhost:3001/api/transactions/deposit-requests',
+        `${API_BASE_URL}/transactions/deposit-requests`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -149,7 +150,7 @@ export const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3001/api/transactions/deposit-requests/${requestId}/approve`,
+        `${API_BASE_URL}/transactions/deposit-requests/${requestId}/approve`,
         {
           method: 'PUT',
           headers: {
@@ -182,7 +183,7 @@ export const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3001/api/transactions/deposit-requests/${requestId}/reject`,
+        `${API_BASE_URL}/transactions/deposit-requests/${requestId}/reject`,
         {
           method: 'PUT',
           headers: {

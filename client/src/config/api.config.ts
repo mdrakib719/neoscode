@@ -1,5 +1,6 @@
-// API Configuration
-export const API_BASE_URL = 'http://localhost:3001/api';
+// API Configuration - uses VITE_API_URL env variable for production, falls back to localhost for dev
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const API_ENDPOINTS = {
   // Auth
