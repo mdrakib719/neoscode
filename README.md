@@ -9,7 +9,6 @@
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Features](#-features)
-- [UI Navigation — All Features](#-ui-navigation--all-features)
 - [Database Schema Overview](#-database-schema-overview)
 - [Environment Setup](#-environment-setup)
 - [Quick Start — One Command](#-quick-start--one-command)
@@ -18,6 +17,7 @@
 - [API Endpoints Reference](#-api-endpoints-reference)
 - [Default Test Credentials](#-default-test-credentials)
 - [Scripts Reference](#-scripts-reference)
+- [UI Navigation — All Features](#-ui-navigation--all-features)
 - [Contributing](#-contributing)
 - [License](#-license)
 
