@@ -1,10 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../controllers/auth.controller';
+import { useNotificationStore } from '../../controllers/notification.controller';
 import './Layout.css';
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
+
+  // Poll unread count every 30 seconds
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30_000);
+    return () => clearInterval(interval);
+  }, []);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -80,6 +89,43 @@ export const Layout: React.FC = () => {
         </div>
 
         <div className="navbar-user">
+          {/* Notification bell */}
+          <Link
+            to="/notifications"
+            title="Notifications"
+            style={{
+              position: 'relative',
+              textDecoration: 'none',
+              fontSize: 22,
+              lineHeight: 1,
+              marginRight: 6,
+            }}
+          >
+            🔔
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -6,
+                  background: '#ef4444',
+                  color: '#fff',
+                  borderRadius: '50%',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  minWidth: 16,
+                  height: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 3px',
+                  lineHeight: 1,
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </Link>
           <span className="user-name">{user?.name}</span>
           <span className={`user-role role-${user?.role?.toLowerCase()}`}>
             {user?.role}

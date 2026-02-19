@@ -96,6 +96,13 @@ export const API_ENDPOINTS = {
   LO_OVERDUE: '/loan-officers/dashboard/overdue',
   LO_SEARCH_CUSTOMER: '/loan-officers/search/customer',
 
+  // Notifications
+  NOTIFICATIONS: '/notifications',
+  NOTIFICATIONS_UNREAD_COUNT: '/notifications/unread-count',
+  NOTIFICATION_MARK_READ: (id: number) => `/notifications/${id}/read`,
+  NOTIFICATIONS_MARK_ALL_READ: '/notifications/read-all',
+  NOTIFICATION_DELETE: (id: number) => `/notifications/${id}`,
+
   // Penalty
   PENALTY_RUN: '/penalty/run',
   PENALTY_SUMMARY: '/penalty/summary',
