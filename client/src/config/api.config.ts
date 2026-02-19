@@ -1,6 +1,7 @@
 // API Configuration - uses VITE_API_URL env variable for production, falls back to localhost for dev
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  import.meta.env.VITE_API_URL ||
+  'https://banking-backend-u99s.onrender.com/api';
 
 export const API_ENDPOINTS = {
   // Auth
