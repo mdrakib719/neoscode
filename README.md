@@ -2105,28 +2105,6 @@ Click the **× (Delete)** button on any notification to remove it permanently
 
 ---
 
-### Default UI Test Credentials
-
-| Role     | Email             | Password     |
-| -------- | ----------------- | ------------ |
-| Admin    | admin@bank.com    | Admin@123    |
-| Employee | employee@bank.com | Employee@123 |
-| Customer | customer@bank.com | Customer@123 |
-
-> Credentials may vary based on your seed data. Check [`database/seed.sql`](database/seed.sql) for the actual seeded accounts.
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m "feat: describe your change"`
-4. Push the branch: `git push origin feature/my-feature`
-5. Open a Pull Request
-
----
-
 ## 📄 License
 
 This project is licensed under the **MIT License**.
