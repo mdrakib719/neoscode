@@ -1280,6 +1280,8 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 
+```
+
 > The seed users above all have the password **`password123`** pre-hashed with bcrypt (10 rounds). No need to run the password script when importing from the SQL dump.
 
 ---
