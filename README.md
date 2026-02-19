@@ -9,6 +9,7 @@
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Features](#-features)
+- [UI Navigation — All Features](#ui-navigation--all-features)
 - [Database Schema Overview](#-database-schema-overview)
 - [Environment Setup](#-environment-setup)
 - [Quick Start — One Command](#-quick-start--one-command)
@@ -17,7 +18,6 @@
 - [API Endpoints Reference](#-api-endpoints-reference)
 - [Default Test Credentials](#-default-test-credentials)
 - [Scripts Reference](#-scripts-reference)
-- [UI Navigation — All Features](#-ui-navigation--all-features)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -1482,7 +1482,7 @@ mysql -u root -p -e "USE banking_system; SELECT fn_calculate_emi(50000, 8.5, 36)
 
 ---
 
-## 🖥️ UI Navigation — All Features
+## UI Navigation — All Features
 
 > A complete step-by-step walkthrough of every feature available in the browser UI, organized by user role.
 
