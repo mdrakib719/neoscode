@@ -28,7 +28,7 @@
 | --------------------- | -------------------------------------------------- |
 | **Backend**           | NestJS 10, TypeORM, Passport, JWT, Speakeasy (2FA) |
 | **Frontend**          | React 18, Vite 5, React Router 6, Zustand, Axios   |
-| **Database**          | MySQL 8 (InnoDB, UTF8MB4)                          |
+| **Database**          | MariaDB 10.4 / MySQL 8 (InnoDB, UTF8MB4)           |
 | **Cache / Blacklist** | Redis 7                                            |
 | **Email**             | Nodemailer + Handlebars templates                  |
 | **PDF**               | PDFKit                                             |
@@ -257,23 +257,29 @@ banking-system/
 
 ## 🗄️ Database Schema Overview
 
-| Table             | Purpose                                                  |
-| ----------------- | -------------------------------------------------------- |
-| `users`           | All users — Admin, Employee, Customer                    |
-| `accounts`        | Bank accounts (Savings / Checking / Loan / FD / RD)      |
-| `transactions`    | All money movements with ACID guarantees                 |
-| `loans`           | Loan applications and lifecycle tracking                 |
-| `token_blacklist` | Invalidated JWT tokens (SHA-256 hash + expiry)           |
-| `audit_logs`      | Admin action log (user, action, resource, IP, timestamp) |
-| `system_config`   | Runtime-configurable settings (rates, limits, fees)      |
+| Table                       | Purpose                                                                   |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `users`                     | All users — Admin, Employee, Customer (with 2FA, lock/active)             |
+| `accounts`                  | Savings / Checking / Loan / Fixed Deposit / Recurring Deposit             |
+| `account_deletion_requests` | Customer-initiated account deletion workflow (pending → approved)         |
+| `beneficiaries`             | Saved transfer targets per user (soft-delete via `is_active`)             |
+| `deposit_requests`          | Deposit request workflow — customer submits, admin approves               |
+| `transactions`              | All money movements (DEPOSIT / WITHDRAW / TRANSFER / EXTERNAL / REVERSAL) |
+| `loans`                     | Loan applications, lifecycle, EMI schedule + penalty tracking             |
+| `loan_payments`             | Individual EMI payment records per loan installment                       |
+| `loan_penalties`            | Late-payment penalty records (PENDING / COLLECTED / WAIVED)               |
+| `notifications`             | In-app notifications (TRANSACTION / LOAN / ACCOUNT / SECURITY / GENERAL)  |
+| `token_blacklist`           | Invalidated JWT tokens stored as SHA-256 hash + expiry                    |
+| `audit_logs`                | Admin action log — action, resource, IP, user agent, timestamp            |
+| `system_config`             | Runtime key-value config: rates, limits, fees, currency                   |
 
 **Views:** `view_account_summary`, `view_transaction_summary`, `view_loan_summary`
 
-**Stored Procedures:** `sp_get_user_balance`, `sp_monthly_transaction_stats`, `sp_get_pending_loans`, `sp_process_monthly_interest`
+**Stored Procedures:** `sp_get_user_balance`, `sp_monthly_transaction_stats`, `sp_get_pending_loans`
 
 **Functions:** `fn_calculate_emi`, `fn_get_account_balance`
 
-**Triggers:** `trg_check_balance_before_withdrawal` (prevents overdraft at DB level), `trg_account_update_log`
+**Triggers:** `trg_check_balance_before_withdrawal` — prevents overdraft at the DB level
 
 ---
 
@@ -370,16 +376,19 @@ cp .env.example .env
 
 ### Step 4 — Set up the database
 
-Run the SQL files in order:
+**Option A — Import the full dump (recommended)**
 
 ```bash
-# Via CLI
+mysql -u root -p < banking_system.sql
+```
+
+**Option B — Run individual SQL files**
+
+```bash
 mysql -u root -p < database/schema.sql
 mysql -u root -p banking_system < database/admin-schema.sql
 mysql -u root -p banking_system < database/procedures.sql
 mysql -u root -p banking_system < database/seed.sql
-
-# Or open each file in MySQL Workbench / DBeaver / TablePlus and execute
 ```
 
 ### Step 5 — Hash seed passwords
@@ -413,178 +422,293 @@ Frontend → **http://localhost:5173**
 
 ## 🗃️ Full Database SQL
 
-> Copy the entire block below and paste it into MySQL to get a **complete, ready-to-use database** — tables, views, triggers, stored procedures, functions, admin tables, default config, and seed data — in a single run.
+> The file `banking_system.sql` (exported from phpMyAdmin / MariaDB 10.4) contains a **complete, ready-to-use dump** — all tables, views, triggers, stored procedures, functions, default config, and seed data in one file.
+
+```bash
+# Import in one command
+mysql -u root -p < banking_system.sql
+```
+
+Or paste the DDL below into MySQL Workbench / DBeaver / TablePlus to create an empty schema ready for the application:
 
 ```sql
 -- ================================================================
--- BANKING SYSTEM — Complete Database Setup
--- Run this single script to get a fully working database.
+-- BANKING SYSTEM — Schema DDL
+-- Server: MariaDB 10.4+ / MySQL 8+  |  Charset: utf8mb4
 -- ================================================================
 
-CREATE DATABASE IF NOT EXISTS banking_system;
+CREATE DATABASE IF NOT EXISTS banking_system
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
 USE banking_system;
 
 -- ────────────────────────────────────────────────────────────────
--- TABLES
+-- CORE TABLES
 -- ────────────────────────────────────────────────────────────────
 
-CREATE TABLE IF NOT EXISTS `users` (
-  `id`         INT          NOT NULL AUTO_INCREMENT,
-  `name`       VARCHAR(255) NOT NULL,
-  `email`      VARCHAR(255) NOT NULL UNIQUE,
-  `password`   VARCHAR(255) NOT NULL,
-  `role`       ENUM('ADMIN','EMPLOYEE','CUSTOMER') NOT NULL DEFAULT 'CUSTOMER',
-  `created_at` DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  `updated_at` DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+CREATE TABLE `users` (
+  `id`                  INT(11)      NOT NULL AUTO_INCREMENT,
+  `name`                VARCHAR(255) NOT NULL,
+  `email`               VARCHAR(255) NOT NULL,
+  `password`            VARCHAR(255) NOT NULL,
+  `role`                ENUM('ADMIN','EMPLOYEE','CUSTOMER') NOT NULL DEFAULT 'CUSTOMER',
+  `isActive`            TINYINT(4)   NOT NULL DEFAULT 1,
+  `isLocked`            TINYINT(4)   NOT NULL DEFAULT 0,
+  `locked_at`           TIMESTAMP    NULL DEFAULT NULL,
+  `lock_reason`         TEXT         DEFAULT NULL,
+  `two_factor_secret`   TEXT         DEFAULT NULL,
+  `two_factor_enabled`  TINYINT(4)   NOT NULL DEFAULT 0,
+  `created_at`          DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at`          DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`id`),
-  INDEX `IDX_users_email` (`email`),
-  INDEX `IDX_users_role`  (`role`)
+  UNIQUE KEY (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `accounts` (
-  `id`             INT           NOT NULL AUTO_INCREMENT,
-  `account_number` VARCHAR(255)  NOT NULL UNIQUE,
-  `account_type`   ENUM('SAVINGS','CHECKING','LOAN') NOT NULL DEFAULT 'SAVINGS',
-  `balance`        DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-  `currency`       VARCHAR(10)   NOT NULL DEFAULT 'USD',
-  `user_id`        INT           NOT NULL,
-  `created_at`     DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  `updated_at`     DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+CREATE TABLE `accounts` (
+  `id`                     INT(11)       NOT NULL AUTO_INCREMENT,
+  `account_number`         VARCHAR(255)  NOT NULL,
+  `account_type`           ENUM('SAVINGS','CHECKING','LOAN','FIXED_DEPOSIT','RECURRING_DEPOSIT')
+                                         NOT NULL DEFAULT 'SAVINGS',
+  `balance`                DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `user_id`                INT(11)       NOT NULL,
+  `currency`               VARCHAR(255)  NOT NULL DEFAULT 'USD',
+  `isFrozen`               TINYINT(4)    NOT NULL DEFAULT 0,
+  `frozen_at`              TIMESTAMP     NULL DEFAULT NULL,
+  `freeze_reason`          TEXT          DEFAULT NULL,
+  `status`                 VARCHAR(255)  NOT NULL DEFAULT 'ACTIVE',
+  `closedAt`               TIMESTAMP     NULL DEFAULT NULL,
+  `closeReason`            TEXT          DEFAULT NULL,
+  `dailyWithdrawalLimit`   DECIMAL(15,2) DEFAULT NULL,
+  `dailyTransferLimit`     DECIMAL(15,2) DEFAULT NULL,
+  `monthlyWithdrawalLimit` DECIMAL(15,2) DEFAULT NULL,
+  -- Fixed Deposit / Recurring Deposit fields
+  `maturity_date`          DATE          DEFAULT NULL,
+  `lock_period_months`     INT(11)       DEFAULT NULL,
+  `deposit_interest_rate`  DECIMAL(5,2)  DEFAULT NULL,
+  `monthly_deposit_amount` DECIMAL(15,2) DEFAULT NULL,
+  `maturity_amount`        DECIMAL(15,2) DEFAULT NULL,
+  `deposit_start_date`     DATE          DEFAULT NULL,
+  -- Soft-delete
+  `deleted_at`             TIMESTAMP     NULL DEFAULT NULL,
+  `deletion_reason`        TEXT          DEFAULT NULL,
+  `created_at`             DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at`             DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `IDX_accounts_account_number` (`account_number`),
-  INDEX `IDX_accounts_user_id` (`user_id`),
-  INDEX `IDX_accounts_type`    (`account_type`),
-  CONSTRAINT `FK_accounts_user`
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  UNIQUE KEY (`account_number`),
+  KEY (`user_id`),
+  CONSTRAINT FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `transactions` (
-  `id`              INT           NOT NULL AUTO_INCREMENT,
-  `from_account_id` INT           NULL,
-  `to_account_id`   INT           NULL,
-  `amount`          DECIMAL(15,2) NOT NULL,
-  `type`            ENUM('DEPOSIT','WITHDRAW','TRANSFER') NOT NULL,
-  `status`          ENUM('PENDING','COMPLETED','FAILED')  NOT NULL DEFAULT 'PENDING',
-  `description`     TEXT          NULL,
-  `created_at`      DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+CREATE TABLE `account_deletion_requests` (
+  `id`                 INT(11)       NOT NULL AUTO_INCREMENT,
+  `account_id`         INT(11)       NOT NULL,
+  `user_id`            INT(11)       NOT NULL,
+  `balance_at_request` DECIMAL(15,2) NOT NULL,
+  `reason`             TEXT          DEFAULT NULL,
+  `status`             VARCHAR(255)  NOT NULL DEFAULT 'PENDING',
+  `admin_remarks`      TEXT          DEFAULT NULL,
+  `processed_by`       INT(11)       DEFAULT NULL,
+  `processed_at`       TIMESTAMP     NULL DEFAULT NULL,
+  `created_at`         DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at`         DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`id`),
-  INDEX `IDX_transactions_from_account` (`from_account_id`),
-  INDEX `IDX_transactions_to_account`   (`to_account_id`),
-  INDEX `IDX_transactions_type`         (`type`),
-  INDEX `IDX_transactions_status`       (`status`),
-  INDEX `IDX_transactions_created_at`   (`created_at`),
-  CONSTRAINT `FK_transactions_from_account`
-    FOREIGN KEY (`from_account_id`) REFERENCES `accounts`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `FK_transactions_to_account`
-    FOREIGN KEY (`to_account_id`)   REFERENCES `accounts`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY (`account_id`), KEY (`user_id`), KEY (`processed_by`),
+  CONSTRAINT FOREIGN KEY (`account_id`)   REFERENCES `accounts`(`id`),
+  CONSTRAINT FOREIGN KEY (`user_id`)      REFERENCES `users`(`id`),
+  CONSTRAINT FOREIGN KEY (`processed_by`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE IF NOT EXISTS `loans` (
-  `id`            INT           NOT NULL AUTO_INCREMENT,
-  `user_id`       INT           NOT NULL,
-  `loan_type`     ENUM('PERSONAL','HOME','VEHICLE','EDUCATION') NOT NULL,
+CREATE TABLE `beneficiaries` (
+  `id`               INT(11)       NOT NULL AUTO_INCREMENT,
+  `user_id`          INT(11)       NOT NULL,
+  `beneficiary_name` VARCHAR(255)  NOT NULL,
+  `account_number`   VARCHAR(255)  NOT NULL,
+  `bank_name`        VARCHAR(255)  DEFAULT NULL,
+  `ifsc_code`        VARCHAR(255)  DEFAULT NULL,
+  `notes`            TEXT          DEFAULT NULL,
+  `is_active`        TINYINT(4)    NOT NULL DEFAULT 1,
+  `created_at`       DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at`       DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY (`user_id`),
+  CONSTRAINT FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `deposit_requests` (
+  `id`            INT(11)       NOT NULL AUTO_INCREMENT,
+  `user_id`       INT(11)       NOT NULL,
+  `account_id`    INT(11)       NOT NULL,
   `amount`        DECIMAL(15,2) NOT NULL,
-  `interest_rate` DECIMAL(5,2)  NOT NULL,
-  `tenure_months` INT           NOT NULL,
-  `emi_amount`    DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-  `status`        ENUM('PENDING','APPROVED','REJECTED','CLOSED') NOT NULL DEFAULT 'PENDING',
-  `remarks`       TEXT          NULL,
+  `status`        ENUM('PENDING','COMPLETED','FAILED','REVERSED') NOT NULL DEFAULT 'PENDING',
+  `description`   TEXT          DEFAULT NULL,
+  `admin_remarks` TEXT          DEFAULT NULL,
+  `approved_by`   INT(11)       DEFAULT NULL,
+  `processed_at`  TIMESTAMP     NULL DEFAULT NULL,
   `created_at`    DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at`    DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`id`),
-  INDEX `IDX_loans_user_id` (`user_id`),
-  INDEX `IDX_loans_status`  (`status`),
-  INDEX `IDX_loans_type`    (`loan_type`),
-  CONSTRAINT `FK_loans_user`
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  KEY (`user_id`), KEY (`account_id`), KEY (`approved_by`),
+  CONSTRAINT FOREIGN KEY (`user_id`)    REFERENCES `users`(`id`),
+  CONSTRAINT FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`),
+  CONSTRAINT FOREIGN KEY (`approved_by`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `transactions` (
+  `id`                       INT(11)       NOT NULL AUTO_INCREMENT,
+  `from_account_id`          INT(11)       DEFAULT NULL,
+  `to_account_id`            INT(11)       DEFAULT NULL,
+  `amount`                   DECIMAL(15,2) NOT NULL,
+  `type`                     ENUM('DEPOSIT','WITHDRAW','TRANSFER','EXTERNAL_TRANSFER','REVERSAL') NOT NULL,
+  `status`                   ENUM('PENDING','COMPLETED','FAILED','REVERSED') NOT NULL DEFAULT 'PENDING',
+  `description`              TEXT          DEFAULT NULL,
+  `transfer_type`            VARCHAR(20)   DEFAULT NULL,          -- 'INTERNAL' | 'EXTERNAL'
+  `external_bank_name`       VARCHAR(255)  DEFAULT NULL,
+  `external_account_number`  VARCHAR(255)  DEFAULT NULL,
+  `external_beneficiary_name` VARCHAR(255) DEFAULT NULL,
+  `external_ifsc_code`       VARCHAR(255)  DEFAULT NULL,
+  `created_at`               DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY (`from_account_id`), KEY (`to_account_id`),
+  CONSTRAINT FOREIGN KEY (`from_account_id`) REFERENCES `accounts`(`id`),
+  CONSTRAINT FOREIGN KEY (`to_account_id`)   REFERENCES `accounts`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `token_blacklist` (
-  `id`         INT         NOT NULL AUTO_INCREMENT,
-  `token_hash` VARCHAR(64) NOT NULL COMMENT 'SHA-256 hash of the JWT',
-  `user_id`    INT         NULL,
-  `type`       VARCHAR(20) NOT NULL DEFAULT 'logout' COMMENT 'logout | user_ban',
-  `reason`     TEXT        NULL,
+CREATE TABLE `loans` (
+  `id`                INT(11)       NOT NULL AUTO_INCREMENT,
+  `user_id`           INT(11)       NOT NULL,
+  `loan_type`         ENUM('PERSONAL','HOME','VEHICLE','EDUCATION') NOT NULL,
+  `amount`            DECIMAL(15,2) NOT NULL,
+  `interest_rate`     DECIMAL(5,2)  NOT NULL,
+  `tenure_months`     INT(11)       NOT NULL,
+  `emi_amount`        DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `status`            ENUM('PENDING','APPROVED','REJECTED','CLOSED') NOT NULL DEFAULT 'PENDING',
+  `remarks`           TEXT          DEFAULT NULL,
+  `remaining_balance` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `paid_installments` INT(11)       NOT NULL DEFAULT 0,
+  `grace_period_days` INT(11)       NOT NULL DEFAULT 5,
+  `penalty_rate`      DECIMAL(5,2)  NOT NULL DEFAULT 2.00,
+  `total_penalty`     DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `created_at`        DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at`        DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY (`user_id`),
+  CONSTRAINT FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `loan_payments` (
+  `id`                  INT(11)       NOT NULL AUTO_INCREMENT,
+  `loan_id`             INT(11)       NOT NULL,
+  `installment_number`  INT(11)       NOT NULL,
+  `amount_paid`         DECIMAL(15,2) NOT NULL,
+  `principal_amount`    DECIMAL(15,2) NOT NULL,
+  `interest_amount`     DECIMAL(15,2) NOT NULL,
+  `penalty_amount`      DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `outstanding_balance` DECIMAL(15,2) NOT NULL,
+  `status`              ENUM('PENDING','COMPLETED','FAILED','REVERSED') NOT NULL DEFAULT 'COMPLETED',
+  `due_date`            DATE          NOT NULL,
+  `paid_date`           DATE          DEFAULT NULL,
+  `remarks`             TEXT          DEFAULT NULL,
+  `created_at`          DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY (`loan_id`),
+  CONSTRAINT FOREIGN KEY (`loan_id`) REFERENCES `loans`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `loan_penalties` (
+  `id`                  INT(11)       NOT NULL AUTO_INCREMENT,
+  `loan_id`             INT(11)       NOT NULL,
+  `installment_number`  INT(11)       NOT NULL,
+  `due_date`            DATE          NOT NULL,
+  `days_overdue`        INT(11)       NOT NULL DEFAULT 0,
+  `emi_amount`          DECIMAL(15,2) NOT NULL,
+  `penalty_amount`      DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `penalty_rate_used`   DECIMAL(5,2)  NOT NULL DEFAULT 2.00,
+  `status`              ENUM('PENDING','COLLECTED','WAIVED') NOT NULL DEFAULT 'PENDING',
+  `penalty_start_date`  DATE          DEFAULT NULL,
+  `resolved_date`       DATE          DEFAULT NULL,
+  `remarks`             TEXT          DEFAULT NULL,
+  `created_at`          DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at`          DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY (`loan_id`),
+  CONSTRAINT FOREIGN KEY (`loan_id`) REFERENCES `loans`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `notifications` (
+  `id`         INT(11)      NOT NULL AUTO_INCREMENT,
+  `user_id`    INT(11)      NOT NULL,
+  `type`       ENUM('TRANSACTION','LOAN','ACCOUNT','SECURITY','GENERAL') NOT NULL,
+  `channel`    ENUM('EMAIL','SMS','IN_APP') NOT NULL,
+  `title`      VARCHAR(255) NOT NULL,
+  `message`    TEXT         NOT NULL,
+  `is_read`    TINYINT(4)   NOT NULL DEFAULT 0,
+  `read_at`    TIMESTAMP    NULL DEFAULT NULL,
+  `is_sent`    TINYINT(4)   NOT NULL DEFAULT 0,
+  `sent_at`    TIMESTAMP    NULL DEFAULT NULL,
+  `metadata`   LONGTEXT     CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL
+               CHECK (JSON_VALID(`metadata`)),
+  `created_at` DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY (`user_id`),
+  CONSTRAINT FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `token_blacklist` (
+  `id`         INT(11)     NOT NULL AUTO_INCREMENT,
+  `token_hash` VARCHAR(64) NOT NULL COMMENT 'SHA-256 hash — never raw JWT',
+  `user_id`    INT(11)     DEFAULT NULL,
+  `type`       VARCHAR(20) NOT NULL DEFAULT 'logout',
+  `reason`     TEXT        DEFAULT NULL,
   `expires_at` DATETIME    NOT NULL,
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `IDX_token_blacklist_hash`    (`token_hash`),
-  INDEX        `IDX_token_blacklist_expires` (`expires_at`),
-  INDEX        `IDX_token_blacklist_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  UNIQUE KEY (`token_hash`),
+  KEY (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE IF NOT EXISTS `system_config` (
-  `id`          INT          AUTO_INCREMENT PRIMARY KEY,
-  `key`         VARCHAR(255) UNIQUE NOT NULL,
+CREATE TABLE `system_config` (
+  `id`          INT(11)      NOT NULL AUTO_INCREMENT,
+  `key`         VARCHAR(255) NOT NULL,
   `value`       TEXT         NOT NULL,
-  `category`    VARCHAR(100) DEFAULT NULL,
-  `description` TEXT         DEFAULT NULL,
-  `created_at`  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-  `updated_at`  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX `idx_config_key`      (`key`),
-  INDEX `idx_config_category` (`category`)
+  `category`    VARCHAR(255) DEFAULT NULL,
+  `description` VARCHAR(255) DEFAULT NULL,
+  `created_at`  DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at`  DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `audit_logs` (
-  `id`          INT          AUTO_INCREMENT PRIMARY KEY,
-  `user_id`     INT          NOT NULL,
-  `action`      VARCHAR(100) NOT NULL,
-  `resource`    VARCHAR(100) NOT NULL,
-  `resource_id` INT          DEFAULT NULL,
+CREATE TABLE `audit_logs` (
+  `id`          INT(11)      NOT NULL AUTO_INCREMENT,
+  `user_id`     INT(11)      NOT NULL,
+  `resource_id` INT(11)      DEFAULT NULL,
   `details`     TEXT         DEFAULT NULL,
-  `ip_address`  VARCHAR(45)  NOT NULL,
   `user_agent`  VARCHAR(255) DEFAULT NULL,
-  `created_at`  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  INDEX `idx_audit_user`     (`user_id`),
-  INDEX `idx_audit_action`   (`action`),
-  INDEX `idx_audit_resource` (`resource`),
-  INDEX `idx_audit_created`  (`created_at`)
+  `action`      VARCHAR(255) NOT NULL,
+  `resource`    VARCHAR(255) NOT NULL,
+  `ip_address`  VARCHAR(255) NOT NULL,
+  `created_at`  DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY (`user_id`),
+  CONSTRAINT FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Extend users: lock / active columns
-ALTER TABLE `users`
-  ADD COLUMN `isActive`    BOOLEAN   DEFAULT TRUE  AFTER `role`,
-  ADD COLUMN `isLocked`    BOOLEAN   DEFAULT FALSE AFTER `isActive`,
-  ADD COLUMN `locked_at`   TIMESTAMP NULL          AFTER `isLocked`,
-  ADD COLUMN `lock_reason` TEXT      NULL          AFTER `locked_at`;
-
--- Extend accounts: freeze / limit / status columns
-ALTER TABLE `accounts`
-  ADD COLUMN `isFrozen`               BOOLEAN        DEFAULT FALSE AFTER `updated_at`,
-  ADD COLUMN `frozen_at`              TIMESTAMP      NULL          AFTER `isFrozen`,
-  ADD COLUMN `freeze_reason`          TEXT           NULL          AFTER `frozen_at`,
-  ADD COLUMN `status`                 ENUM('ACTIVE','FROZEN','CLOSED') DEFAULT 'ACTIVE' AFTER `freeze_reason`,
-  ADD COLUMN `closedAt`               TIMESTAMP      NULL          AFTER `status`,
-  ADD COLUMN `closeReason`            TEXT           NULL          AFTER `closedAt`,
-  ADD COLUMN `dailyWithdrawalLimit`   DECIMAL(15,2)  DEFAULT 10000.00  AFTER `closeReason`,
-  ADD COLUMN `dailyTransferLimit`     DECIMAL(15,2)  DEFAULT 50000.00  AFTER `dailyWithdrawalLimit`,
-  ADD COLUMN `monthlyWithdrawalLimit` DECIMAL(15,2)  DEFAULT 100000.00 AFTER `dailyTransferLimit`;
-
--- Performance indexes
-CREATE INDEX `IDX_accounts_user_type`       ON `accounts`     (`user_id`,    `account_type`);
-CREATE INDEX `IDX_transactions_date_status` ON `transactions`  (`created_at`, `status`);
-CREATE INDEX `IDX_loans_user_status`        ON `loans`         (`user_id`,    `status`);
-CREATE INDEX `idx_users_active`             ON `users`         (`isActive`);
-CREATE INDEX `idx_users_locked`             ON `users`         (`isLocked`);
-CREATE INDEX `idx_accounts_status`          ON `accounts`      (`status`);
-CREATE INDEX `idx_accounts_frozen`          ON `accounts`      (`isFrozen`);
 
 -- ────────────────────────────────────────────────────────────────
 -- VIEWS
 -- ────────────────────────────────────────────────────────────────
 
 CREATE OR REPLACE VIEW `view_account_summary` AS
-SELECT
-  a.id AS account_id, a.account_number, a.account_type, a.balance, a.currency,
-  u.id AS user_id, u.name AS user_name, u.email AS user_email, a.created_at
-FROM accounts a INNER JOIN users u ON a.user_id = u.id;
+SELECT a.id AS account_id, a.account_number, a.account_type,
+       a.balance, a.currency, u.id AS user_id,
+       u.name AS user_name, u.email AS user_email, a.created_at
+FROM accounts a JOIN users u ON a.user_id = u.id;
 
 CREATE OR REPLACE VIEW `view_transaction_summary` AS
-SELECT
-  t.id AS transaction_id, t.type, t.amount, t.status, t.description, t.created_at,
-  fa.account_number AS from_account, ta.account_number AS to_account,
-  fu.name AS from_user, tu.name AS to_user
+SELECT t.id AS transaction_id, t.type, t.amount, t.status,
+       t.description, t.created_at,
+       fa.account_number AS from_account, ta.account_number AS to_account,
+       fu.name AS from_user, tu.name AS to_user
 FROM transactions t
 LEFT JOIN accounts fa ON t.from_account_id = fa.id
 LEFT JOIN accounts ta ON t.to_account_id   = ta.id
@@ -592,12 +716,11 @@ LEFT JOIN users fu ON fa.user_id = fu.id
 LEFT JOIN users tu ON ta.user_id = tu.id;
 
 CREATE OR REPLACE VIEW `view_loan_summary` AS
-SELECT
-  l.id AS loan_id, l.loan_type, l.amount, l.interest_rate,
-  l.tenure_months, l.emi_amount, l.status, l.created_at,
-  u.id AS user_id, u.name AS user_name, u.email AS user_email,
-  (l.amount + (l.amount * l.interest_rate * l.tenure_months / 1200)) AS total_payable
-FROM loans l INNER JOIN users u ON l.user_id = u.id;
+SELECT l.id AS loan_id, l.loan_type, l.amount, l.interest_rate,
+       l.tenure_months, l.emi_amount, l.status, l.created_at,
+       u.id AS user_id, u.name AS user_name, u.email AS user_email,
+       l.amount + l.amount * l.interest_rate * l.tenure_months / 1200 AS total_payable
+FROM loans l JOIN users u ON l.user_id = u.id;
 
 -- ────────────────────────────────────────────────────────────────
 -- FUNCTIONS
@@ -609,12 +732,10 @@ CREATE FUNCTION IF NOT EXISTS fn_calculate_emi(
   principal     DECIMAL(15,2),
   annual_rate   DECIMAL(5,2),
   tenure_months INT
-)
-RETURNS DECIMAL(15,2)
-DETERMINISTIC
+) RETURNS DECIMAL(15,2) DETERMINISTIC
 BEGIN
   DECLARE monthly_rate DECIMAL(10,8);
-  DECLARE emi          DECIMAL(15,2);
+  DECLARE emi DECIMAL(15,2);
   SET monthly_rate = annual_rate / 12 / 100;
   IF monthly_rate = 0 THEN
     SET emi = principal / tenure_months;
@@ -625,31 +746,29 @@ BEGIN
   RETURN ROUND(emi, 2);
 END //
 
-CREATE FUNCTION IF NOT EXISTS fn_get_account_balance(account_id INT)
-RETURNS DECIMAL(15,2)
-READS SQL DATA
+CREATE FUNCTION IF NOT EXISTS fn_get_account_balance(p_account_id INT)
+RETURNS DECIMAL(15,2) READS SQL DATA
 BEGIN
-  DECLARE current_balance DECIMAL(15,2);
-  SELECT balance INTO current_balance FROM accounts WHERE id = account_id;
-  RETURN COALESCE(current_balance, 0);
+  DECLARE bal DECIMAL(15,2);
+  SELECT balance INTO bal FROM accounts WHERE id = p_account_id;
+  RETURN COALESCE(bal, 0);
 END //
 
 DELIMITER ;
 
 -- ────────────────────────────────────────────────────────────────
--- TRIGGERS
+-- TRIGGER
 -- ────────────────────────────────────────────────────────────────
 
 DELIMITER //
 
 CREATE TRIGGER IF NOT EXISTS trg_check_balance_before_withdrawal
-BEFORE INSERT ON transactions
-FOR EACH ROW
+BEFORE INSERT ON transactions FOR EACH ROW
 BEGIN
-  DECLARE current_balance DECIMAL(15,2);
+  DECLARE cur_bal DECIMAL(15,2);
   IF NEW.type = 'WITHDRAW' AND NEW.from_account_id IS NOT NULL THEN
-    SELECT balance INTO current_balance FROM accounts WHERE id = NEW.from_account_id;
-    IF current_balance < NEW.amount THEN
+    SELECT balance INTO cur_bal FROM accounts WHERE id = NEW.from_account_id;
+    IF cur_bal < NEW.amount THEN
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Insufficient balance for withdrawal';
     END IF;
   END IF;
@@ -668,8 +787,7 @@ BEGIN
   SELECT u.id, u.name, u.email,
          COUNT(a.id) AS total_accounts,
          COALESCE(SUM(a.balance), 0) AS total_balance
-  FROM users u
-  LEFT JOIN accounts a ON u.id = a.user_id
+  FROM users u LEFT JOIN accounts a ON u.id = a.user_id
   WHERE u.id = p_user_id
   GROUP BY u.id, u.name, u.email;
 END //
@@ -679,7 +797,7 @@ BEGIN
   SELECT type, status,
          COUNT(*) AS transaction_count,
          SUM(amount) AS total_amount,
-         AVG(amount) AS average_amount
+         AVG(amount) AS avg_amount
   FROM transactions
   WHERE YEAR(created_at) = p_year AND MONTH(created_at) = p_month
   GROUP BY type, status ORDER BY type, status;
@@ -687,8 +805,8 @@ END //
 
 CREATE PROCEDURE IF NOT EXISTS sp_get_pending_loans()
 BEGIN
-  SELECT l.*, u.name AS user_name, u.email AS user_email, u.role AS user_role
-  FROM loans l INNER JOIN users u ON l.user_id = u.id
+  SELECT l.*, u.name AS user_name, u.email AS user_email
+  FROM loans l JOIN users u ON l.user_id = u.id
   WHERE l.status = 'PENDING'
   ORDER BY l.created_at ASC;
 END //
@@ -699,105 +817,52 @@ DELIMITER ;
 -- DEFAULT SYSTEM CONFIGURATION
 -- ────────────────────────────────────────────────────────────────
 
-INSERT INTO `system_config` (`key`, `value`, `category`, `description`) VALUES
-  ('transaction.dailyTransferLimit',   '50000', 'limits',   'Default daily transfer limit per account'),
-  ('transaction.dailyWithdrawalLimit', '10000', 'limits',   'Default daily withdrawal limit per account'),
-  ('transaction.perTransactionLimit',  '25000', 'limits',   'Maximum amount per single transaction'),
-  ('fees.transfer',                    '0',     'fees',     'Transfer fee in currency'),
-  ('fees.withdrawal',                  '0',     'fees',     'Withdrawal fee in currency'),
-  ('fees.monthlyMaintenance',          '5',     'fees',     'Monthly account maintenance fee'),
-  ('interest.SAVINGS',                 '4',     'interest', 'Annual interest rate for savings accounts (%)'),
-  ('interest.CHECKING',                '0',     'interest', 'Annual interest rate for checking accounts (%)'),
-  ('loan.interest.PERSONAL',           '12',    'loan',     'Annual interest rate for personal loans (%)'),
-  ('loan.interest.HOME',               '8',     'loan',     'Annual interest rate for home loans (%)'),
-  ('loan.interest.VEHICLE',            '10',    'loan',     'Annual interest rate for vehicle loans (%)'),
-  ('loan.interest.EDUCATION',          '6',     'loan',     'Annual interest rate for education loans (%)'),
-  ('penalty.lateFeePercentage',        '2',     'penalty',  'Late payment fee percentage'),
-  ('penalty.overdraftFee',             '35',    'penalty',  'Overdraft fee amount'),
-  ('penalty.minimumBalanceFee',        '10',    'penalty',  'Fee for falling below minimum balance'),
-  ('system.defaultCurrency',           'USD',   'system',   'Default system currency'),
-  ('system.maintenanceMode',           'false', 'system',   'Enable/disable system maintenance mode')
+INSERT INTO system_config (`key`, `value`, `category`, `description`) VALUES
+  ('transaction.dailyTransferLimit',   '50000', NULL, NULL),
+  ('transaction.dailyWithdrawalLimit', '10000', NULL, NULL),
+  ('transaction.perTransactionLimit',  '25000', NULL, NULL),
+  ('fees.transfer',                    '0',     NULL, NULL),
+  ('fees.withdrawal',                  '0',     NULL, NULL),
+  ('fees.monthlyMaintenance',          '5',     NULL, NULL),
+  ('interest.SAVINGS',                 '6',     NULL, NULL),   -- 6 % p.a.
+  ('interest.CHECKING',                '0',     NULL, NULL),
+  ('loan.interest.PERSONAL',           '12',    NULL, NULL),
+  ('loan.interest.HOME',               '8',     NULL, NULL),
+  ('loan.interest.VEHICLE',            '10',    NULL, NULL),
+  ('loan.interest.EDUCATION',          '6',     NULL, NULL),
+  ('penalty.lateFeePercentage',        '2',     NULL, NULL),
+  ('penalty.overdraftFee',             '35',    NULL, NULL),
+  ('penalty.minimumBalanceFee',        '10',    NULL, NULL),
+  ('system.defaultCurrency',           'USD',   NULL, NULL),
+  ('system.maintenanceMode',           'false', NULL, NULL)
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
 
 -- ────────────────────────────────────────────────────────────────
--- SEED DATA  (Development / Testing)
--- Default password for all users: password123
--- After inserting, run: node scripts/update-passwords.js
+-- SEED / TEST USERS  (password: password123)
+-- bcrypt hash: $2b$10$9GLc/pPfcORPanDXN0V32OOE1qA/29RZ8DX2k12QkHQGNiag4HSYi
 -- ────────────────────────────────────────────────────────────────
-
-SET FOREIGN_KEY_CHECKS = 0;
-TRUNCATE TABLE transactions;
-TRUNCATE TABLE loans;
-TRUNCATE TABLE accounts;
-TRUNCATE TABLE users;
-SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT INTO users (name, email, password, role, isActive) VALUES
-  ('System Administrator', 'admin@banking.com',         '$2b$10$YourHashHere', 'ADMIN',    TRUE),
-  ('John Employee',        'john.employee@banking.com', '$2b$10$YourHashHere', 'EMPLOYEE', TRUE),
-  ('Sarah Manager',        'sarah.manager@banking.com', '$2b$10$YourHashHere', 'EMPLOYEE', TRUE),
-  ('Alice Johnson',        'alice.johnson@example.com', '$2b$10$YourHashHere', 'CUSTOMER', TRUE),
-  ('Bob Smith',            'bob.smith@example.com',     '$2b$10$YourHashHere', 'CUSTOMER', TRUE),
-  ('Charlie Brown',        'charlie.brown@example.com', '$2b$10$YourHashHere', 'CUSTOMER', TRUE),
-  ('Diana Prince',         'diana.prince@example.com',  '$2b$10$YourHashHere', 'CUSTOMER', TRUE),
-  ('Eve Wilson',           'eve.wilson@example.com',    '$2b$10$YourHashHere', 'CUSTOMER', TRUE);
-
-INSERT INTO accounts (account_number, account_type, balance, currency, user_id) VALUES
-  ('1000000001', 'SAVINGS',  100000.00, 'USD', 1),
-  ('1000000002', 'SAVINGS',   50000.00, 'USD', 2),
-  ('1000000003', 'CHECKING',  30000.00, 'USD', 3),
-  ('2000000001', 'SAVINGS',   25000.00, 'USD', 4),
-  ('2000000002', 'CHECKING',  15000.00, 'USD', 4),
-  ('2000000003', 'SAVINGS',   50000.00, 'USD', 5),
-  ('2000000004', 'CHECKING',  20000.00, 'USD', 5),
-  ('2000000005', 'SAVINGS',   35000.00, 'USD', 6),
-  ('2000000006', 'SAVINGS',   45000.00, 'USD', 7),
-  ('2000000007', 'CHECKING',  12000.00, 'USD', 8);
-
-INSERT INTO transactions (from_account_id, to_account_id, amount, type, status, description, created_at) VALUES
-  (NULL, 1, 100000.00, 'DEPOSIT',  'COMPLETED', 'Initial deposit',       '2024-01-01 10:00:00'),
-  (NULL, 4,  25000.00, 'DEPOSIT',  'COMPLETED', 'Salary credit',         '2024-01-05 09:00:00'),
-  (NULL, 5,  50000.00, 'DEPOSIT',  'COMPLETED', 'Salary credit',         '2024-01-05 09:00:00'),
-  (NULL, 6,  35000.00, 'DEPOSIT',  'COMPLETED', 'Initial deposit',       '2024-01-10 11:00:00'),
-  (4,    NULL, 5000.00,'WITHDRAW', 'COMPLETED', 'ATM withdrawal',        '2024-01-15 14:30:00'),
-  (5,    NULL,10000.00,'WITHDRAW', 'COMPLETED', 'Cash withdrawal',       '2024-01-20 16:00:00'),
-  (4,    5,   2000.00, 'TRANSFER', 'COMPLETED', 'Payment for services',  '2024-01-25 12:00:00'),
-  (5,    6,   5000.00, 'TRANSFER', 'COMPLETED', 'Gift transfer',         '2024-02-01 10:30:00'),
-  (6,    4,   1500.00, 'TRANSFER', 'COMPLETED', 'Loan repayment',        '2024-02-05 15:45:00'),
-  (NULL, 4,   3000.00, 'DEPOSIT',  'COMPLETED', 'Freelance payment',     '2024-02-10 09:00:00'),
-  (NULL, 5,   5000.00, 'DEPOSIT',  'COMPLETED', 'Bonus credit',          '2024-02-12 10:00:00'),
-  (4,    8,    500.00, 'TRANSFER', 'COMPLETED', 'Utility bill payment',  '2024-02-14 14:00:00'),
-  (5,    7,   1000.00, 'TRANSFER', 'COMPLETED', 'Monthly rent',          '2024-02-15 08:00:00');
-
-INSERT INTO loans (user_id, loan_type, amount, interest_rate, tenure_months, emi_amount, status, remarks, created_at) VALUES
-  (4, 'PERSONAL',  50000.00,  8.50,  36, 1575.45, 'APPROVED', 'Good credit history',       '2024-01-10 10:00:00'),
-  (5, 'HOME',     500000.00,  7.50, 240, 4032.99, 'APPROVED', 'Approved for home purchase','2024-01-15 11:00:00'),
-  (6, 'VEHICLE',  150000.00,  9.00,  60, 3112.61, 'APPROVED', 'Vehicle purchase',          '2024-01-20 14:00:00'),
-  (7, 'EDUCATION',100000.00,  6.50,  84, 1544.37, 'APPROVED', 'Education loan',            '2024-02-01 09:00:00'),
-  (8, 'PERSONAL',  75000.00,  8.50,  48, 1855.17, 'PENDING',   NULL,                       '2024-02-10 10:00:00'),
-  (4, 'VEHICLE',  200000.00,  9.00,  60, 4150.15, 'PENDING',   NULL,                       '2024-02-12 11:00:00'),
-  (5, 'PERSONAL', 100000.00, 10.00,  24, 4614.49, 'REJECTED', 'Insufficient income proof', '2024-01-25 15:00:00');
-
-COMMIT;
+  ('Test Customer', 'customer@banking.com',  '$2b$10$9GLc/pPfcORPanDXN0V32OOE1qA/29RZ8DX2k12QkHQGNiag4HSYi', 'CUSTOMER', 1),
+  ('test',          'test@gmail.com',         '$2b$10$9GLc/pPfcORPanDXN0V32OOE1qA/29RZ8DX2k12QkHQGNiag4HSYi', 'CUSTOMER', 1),
+  ('admin',         'admin@banking.com',      '$2b$10$9GLc/pPfcORPanDXN0V32OOE1qA/29RZ8DX2k12QkHQGNiag4HSYi', 'ADMIN',    1),
+  ('rakib',         'rakib@gmail.com',         '$2b$10$9GLc/pPfcORPanDXN0V32OOE1qA/29RZ8DX2k12QkHQGNiag4HSYi', 'EMPLOYEE', 1),
+  ('rakib',         'mdrakib789@gmail.com',    '$2b$10$9GLc/pPfcORPanDXN0V32OOE1qA/29RZ8DX2k12QkHQGNiag4HSYi', 'CUSTOMER', 1);
 
 -- ────────────────────────────────────────────────────────────────
--- QUICK REFERENCE QUERIES
+-- QUICK-REFERENCE QUERIES
 -- ────────────────────────────────────────────────────────────────
 -- SELECT * FROM view_account_summary;
 -- SELECT * FROM view_transaction_summary;
 -- SELECT * FROM view_loan_summary;
 -- CALL sp_get_user_balance(1);
--- CALL sp_monthly_transaction_stats(2024, 2);
+-- CALL sp_monthly_transaction_stats(2026, 2);
 -- CALL sp_get_pending_loans();
 -- SELECT fn_calculate_emi(50000, 8.5, 36) AS emi;
 -- SELECT fn_get_account_balance(1) AS balance;
 ```
 
-> After running the SQL, generate real bcrypt hashes for the seed users:
->
-> ```bash
-> node scripts/update-passwords.js
-> ```
+> The seed users above all have the password **`password123`** pre-hashed with bcrypt (10 rounds). No need to run the password script when importing from the SQL dump.
 
 ---
 
@@ -942,18 +1007,16 @@ All routes are prefixed with `/api`. A JWT Bearer token is required on all route
 
 ## 🔑 Default Test Credentials
 
-> All seed users share the password **`password123`** after running `node scripts/update-passwords.js`.
+> All seed users share the password **`password123`** (bcrypt-hashed and included in `banking_system.sql` — no extra step needed).
 
-| Role     | Email                     | Password    |
-| -------- | ------------------------- | ----------- |
-| Admin    | admin@banking.com         | password123 |
-| Employee | john.employee@banking.com | password123 |
-| Employee | sarah.manager@banking.com | password123 |
-| Customer | alice.johnson@example.com | password123 |
-| Customer | bob.smith@example.com     | password123 |
-| Customer | charlie.brown@example.com | password123 |
-| Customer | diana.prince@example.com  | password123 |
-| Customer | eve.wilson@example.com    | password123 |
+| Role     | Name          | Email                | Password    | Notes              |
+| -------- | ------------- | -------------------- | ----------- | ------------------ |
+| Admin    | admin         | admin@banking.com    | password123 |                    |
+| Employee | rakib         | rakib@gmail.com      | password123 |                    |
+| Customer | Test Customer | customer@banking.com | password123 |                    |
+| Customer | test          | test@gmail.com       | password123 |                    |
+| Customer | rakib         | mdrakib789@gmail.com | password123 |                    |
+| Customer | Bulbul        | bulbul@gmail.com     | password123 | 2FA enabled (TOTP) |
 
 ---
 
