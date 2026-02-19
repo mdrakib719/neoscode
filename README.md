@@ -292,7 +292,7 @@ NODE_ENV=development
 
 # ─── Database ──────────────────────────────────────────────
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=3307
 DB_USERNAME=root
 DB_PASSWORD=your_mysql_password
 DB_DATABASE=banking_system
@@ -310,7 +310,7 @@ REDIS_PASSWORD=
 ACCOUNT_ENCRYPTION_KEY=your-encryption-key-exactly-32-chars
 ```
 
-> **Note:** `.env.example` shows `DB_PORT=3307`. Change to `3306` if using a standard MySQL installation.
+
 
 ---
 
