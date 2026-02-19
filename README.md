@@ -11,10 +11,10 @@
 - [Features](#-features)
 - [UI Navigation — All Features](#ui-navigation--all-features)
 - [Database Schema Overview](#database-schema-overview)
-- [Environment Setup](#-environment-setup)
+- [Environment Setup](#environment-setup)
 - [Quick Start — One Command](#-quick-start--one-command)
 - [Manual Setup](#-manual-setup)
-- [Full Database SQL](#-full-database-sql)
+- [Full Database SQL](#full-database-sql)
 - [API Endpoints Reference](#-api-endpoints-reference)
 - [Default Test Credentials](#-default-test-credentials)
 - [Scripts Reference](#-scripts-reference)
@@ -256,7 +256,7 @@ banking-system/
 
 ---
 
-## 🗄️ Database Schema Overview
+## Database Schema Overview
 
 | Table                       | Purpose                                                                   |
 | --------------------------- | ------------------------------------------------------------------------- |
@@ -284,7 +284,7 @@ banking-system/
 
 ---
 
-## ⚙️ Environment Setup
+## Environment Setup
 
 Copy `.env.example` to `.env` and fill in your values:
 
@@ -419,7 +419,7 @@ Frontend → **http://localhost:3000**
 
 ---
 
-## 🗃️ Full Database SQL
+## Full Database SQL
 
 > The file `banking_system.sql` (exported from phpMyAdmin / MariaDB 10.4) contains a **complete, ready-to-use dump** — all tables, views, triggers, stored procedures, functions, default config, and seed data in one file.
 
