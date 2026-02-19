@@ -9,6 +9,7 @@ import { Transaction } from './entities/transaction.entity';
 import { Beneficiary } from './entities/beneficiary.entity';
 import { DepositRequest } from './entities/deposit-request.entity';
 import { Account } from '@/accounts/entities/account.entity';
+import { User } from '@/users/entities/user.entity';
 import { DepositDto, WithdrawDto, TransferDto } from './dto/transaction.dto';
 import { AddBeneficiaryDto, UpdateBeneficiaryDto } from './dto/beneficiary.dto';
 import {
@@ -17,6 +18,7 @@ import {
   RejectDepositRequestDto,
 } from './dto/deposit-request.dto';
 import { TransactionType, TransactionStatus } from '@/common/enums';
+import { NotificationsService } from '@/notifications/notifications.service';
 
 @Injectable()
 export class TransactionsService {
@@ -29,7 +31,10 @@ export class TransactionsService {
     private depositRequestRepository: Repository<DepositRequest>,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private dataSource: DataSource,
+    private notificationsService: NotificationsService,
   ) {}
 
   // Old direct deposit method - now disabled for users
@@ -148,6 +153,21 @@ export class TransactionsService {
       );
 
       await queryRunner.commitTransaction();
+
+      // Notify user about approved deposit
+      if (depositRequest.user) {
+        this.notificationsService
+          .sendTransactionNotification(
+            depositRequest.user_id,
+            depositRequest.user.email,
+            depositRequest.user.name,
+            'Deposit',
+            Number(depositRequest.amount),
+            account.account_number,
+          )
+          .catch(() => {});
+      }
+
       return updatedRequest;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -183,7 +203,22 @@ export class TransactionsService {
     depositRequest.admin_remarks = rejectDto.remarks;
     depositRequest.processed_at = new Date();
 
-    return this.depositRequestRepository.save(depositRequest);
+    const saved = await this.depositRequestRepository.save(depositRequest);
+
+    // Notify user about rejected deposit
+    if (depositRequest.user) {
+      this.notificationsService
+        .sendAccountNotification(
+          depositRequest.user_id,
+          depositRequest.user.email,
+          depositRequest.user.name,
+          'Deposit Request Rejected',
+          depositRequest.account?.account_number ?? '',
+        )
+        .catch(() => {});
+    }
+
+    return saved;
   }
 
   async withdraw(
@@ -241,6 +276,22 @@ export class TransactionsService {
       );
 
       await queryRunner.commitTransaction();
+
+      // Notify user about withdrawal
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        this.notificationsService
+          .sendTransactionNotification(
+            userId,
+            user.email,
+            user.name,
+            'Withdrawal',
+            Number(withdrawDto.amount),
+            account.account_number,
+          )
+          .catch(() => {});
+      }
+
       return savedTransaction;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -321,6 +372,24 @@ export class TransactionsService {
 
         const saved = await queryRunner.manager.save(Transaction, transaction);
         await queryRunner.commitTransaction();
+
+        // Notify sender about external transfer
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        if (user) {
+          this.notificationsService
+            .sendTransactionNotification(
+              userId,
+              user.email,
+              user.name,
+              'External Transfer',
+              Number(transferDto.amount),
+              fromAccount.account_number,
+            )
+            .catch(() => {});
+        }
+
         return saved;
       }
 
@@ -369,6 +438,22 @@ export class TransactionsService {
 
       const saved = await queryRunner.manager.save(Transaction, transaction);
       await queryRunner.commitTransaction();
+
+      // Notify sender about internal transfer
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        this.notificationsService
+          .sendTransactionNotification(
+            userId,
+            user.email,
+            user.name,
+            'Transfer',
+            Number(transferDto.amount),
+            fromAccount.account_number,
+          )
+          .catch(() => {});
+      }
+
       return saved;
     } catch (error) {
       await queryRunner.rollbackTransaction();

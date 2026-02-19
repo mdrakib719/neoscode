@@ -9,6 +9,7 @@ import { Loan } from './entities/loan.entity';
 import { LoanPayment } from './entities/loan-payment.entity';
 import { Account } from '@/accounts/entities/account.entity';
 import { Transaction } from '@/transactions/entities/transaction.entity';
+import { User } from '@/users/entities/user.entity';
 import { ApplyLoanDto, ApproveLoanDto, PayEMIDto } from './dto/loan.dto';
 import {
   LoanStatus,
@@ -16,6 +17,7 @@ import {
   TransactionType,
   AccountType,
 } from '@/common/enums';
+import { NotificationsService } from '@/notifications/notifications.service';
 
 @Injectable()
 export class LoansService {
@@ -28,7 +30,10 @@ export class LoansService {
     private accountRepository: Repository<Account>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private dataSource: DataSource,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -170,6 +175,21 @@ export class LoansService {
       const updatedLoan = await queryRunner.manager.save(Loan, loan);
 
       await queryRunner.commitTransaction();
+
+      // Notify customer
+      if (loan.user) {
+        this.notificationsService
+          .sendLoanNotification(
+            loan.user_id,
+            loan.user.email,
+            loan.user.name,
+            'Approved',
+            Number(loan.amount),
+            loan.loan_type,
+          )
+          .catch(() => {});
+      }
+
       return updatedLoan;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -189,7 +209,23 @@ export class LoansService {
     loan.status = LoanStatus.REJECTED;
     loan.remarks = approveLoanDto.remarks || 'Rejected by admin';
 
-    return this.loanRepository.save(loan);
+    const saved = await this.loanRepository.save(loan);
+
+    // Notify customer
+    if (loan.user) {
+      this.notificationsService
+        .sendLoanNotification(
+          loan.user_id,
+          loan.user.email,
+          loan.user.name,
+          'Rejected',
+          Number(loan.amount),
+          loan.loan_type,
+        )
+        .catch(() => {});
+    }
+
+    return saved;
   }
 
   async getRepaymentSchedule(loanId: number) {
@@ -431,6 +467,22 @@ export class LoansService {
       await queryRunner.manager.save(Loan, loan);
 
       await queryRunner.commitTransaction();
+
+      // Notify customer about EMI payment
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        this.notificationsService
+          .sendTransactionNotification(
+            userId,
+            user.email,
+            user.name,
+            `EMI Payment #${savedPayment.installment_number}`,
+            paymentAmount,
+            account.account_number,
+          )
+          .catch(() => {});
+      }
+
       return savedPayment;
     } catch (error) {
       await queryRunner.rollbackTransaction();

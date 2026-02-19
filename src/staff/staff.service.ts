@@ -18,6 +18,7 @@ import {
   StaffWithdrawDto,
   StaffTransferDto,
 } from './dto/staff-account.dto';
+import { NotificationsService } from '@/notifications/notifications.service';
 
 @Injectable()
 export class StaffService {
@@ -28,6 +29,7 @@ export class StaffService {
     private userRepository: Repository<User>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -136,7 +138,26 @@ export class StaffService {
       account.status = 'ACTIVE';
     }
 
-    return this.accountRepository.save(account);
+    const savedAccount = await this.accountRepository.save(account);
+
+    // Notify account owner
+    if (account.user) {
+      const action = dto.isFrozen ? 'Frozen' : 'Unfrozen';
+      const message = dto.isFrozen
+        ? `Your account ${account.account_number} has been frozen${dto.reason ? ': ' + dto.reason : ''}. Please contact support for assistance.`
+        : `Your account ${account.account_number} has been unfrozen and is now active.`;
+      this.notificationsService
+        .sendAccountNotification(
+          account.user_id,
+          account.user.email,
+          account.user.name,
+          action,
+          account.account_number,
+        )
+        .catch(() => {});
+    }
+
+    return savedAccount;
   }
 
   /**
@@ -147,7 +168,7 @@ export class StaffService {
     staffId: number,
   ): Promise<Transaction> {
     // Verify customer exists
-    await this.getCustomerDetails(depositDto.customerId);
+    const customer = await this.getCustomerDetails(depositDto.customerId);
 
     // Get customer's primary account (first or SAVINGS)
     const accounts = await this.getCustomerAccounts(depositDto.customerId);
@@ -172,6 +193,18 @@ export class StaffService {
     targetAccount.balance = Number(targetAccount.balance) + depositDto.amount;
     await this.accountRepository.save(targetAccount);
 
+    // Notify customer
+    this.notificationsService
+      .sendTransactionNotification(
+        customer.id,
+        customer.email,
+        customer.name,
+        'Deposit',
+        depositDto.amount,
+        targetAccount.account_number,
+      )
+      .catch(() => {});
+
     return transaction;
   }
 
@@ -183,7 +216,7 @@ export class StaffService {
     staffId: number,
   ): Promise<Transaction> {
     // Verify customer exists
-    await this.getCustomerDetails(withdrawDto.customerId);
+    const customer = await this.getCustomerDetails(withdrawDto.customerId);
 
     // Get customer's primary account
     const accounts = await this.getCustomerAccounts(withdrawDto.customerId);
@@ -213,6 +246,18 @@ export class StaffService {
     // Update account balance
     sourceAccount.balance = Number(sourceAccount.balance) - withdrawDto.amount;
     await this.accountRepository.save(sourceAccount);
+
+    // Notify customer
+    this.notificationsService
+      .sendTransactionNotification(
+        customer.id,
+        customer.email,
+        customer.name,
+        'Withdrawal',
+        withdrawDto.amount,
+        sourceAccount.account_number,
+      )
+      .catch(() => {});
 
     return transaction;
   }
@@ -251,6 +296,20 @@ export class StaffService {
 
     await this.accountRepository.save(fromAccount);
     await this.accountRepository.save(toAccount);
+
+    // Notify sender (fromAccount has user loaded via getAccountDetails)
+    if (fromAccount.user) {
+      this.notificationsService
+        .sendTransactionNotification(
+          fromAccount.user_id,
+          fromAccount.user.email,
+          fromAccount.user.name,
+          'Transfer',
+          transferDto.amount,
+          fromAccount.account_number,
+        )
+        .catch(() => {});
+    }
 
     return transaction;
   }

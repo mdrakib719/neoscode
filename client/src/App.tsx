@@ -11,6 +11,7 @@ import { Profile } from './views/profile/Profile';
 import { StaffDashboard } from './views/staff/StaffDashboard';
 import { LoanOfficerDashboard } from './views/loan-officers/LoanOfficerDashboard';
 import { MonthlyStatement } from './views/reports/MonthlyStatement';
+import { Notifications } from './views/notifications/Notifications';
 import { Layout } from './components/Layout/Layout';
 import { useAuthStore } from './controllers/auth.controller';
 import './index.css';
@@ -55,6 +56,7 @@ function App() {
           <Route path="loans" element={<Loans />} />
           <Route path="admin" element={<AdminPanel />} />
           <Route path="statements" element={<MonthlyStatement />} />
+          <Route path="notifications" element={<Notifications />} />
           {/* Employee-only routes */}
           <Route
             path="staff"

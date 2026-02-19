@@ -194,3 +194,28 @@ export interface SystemReport {
   totalLoans: number;
   totalDeposits: number;
 }
+
+export type NotificationType =
+  | 'TRANSACTION'
+  | 'LOAN'
+  | 'ACCOUNT'
+  | 'SECURITY'
+  | 'GENERAL';
+
+export type NotificationChannel = 'EMAIL' | 'SMS' | 'IN_APP';
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  type: NotificationType;
+  channel: NotificationChannel;
+  title: string;
+  message: string;
+  is_read: boolean;
+  read_at: string | null;
+  is_sent: boolean;
+  sent_at: string | null;
+  metadata: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+}
