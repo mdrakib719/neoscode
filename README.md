@@ -10,7 +10,7 @@
 - [Project Structure](#-project-structure)
 - [Features](#-features)
 - [UI Navigation — All Features](#ui-navigation--all-features)
-- [Database Schema Overview](#-database-schema-overview)
+- [Database Schema Overview](#database-schema-overview)
 - [Environment Setup](#-environment-setup)
 - [Quick Start — One Command](#-quick-start--one-command)
 - [Manual Setup](#-manual-setup)
