@@ -6,9 +6,9 @@ A production-grade **Banking Management System** built with **NestJS**, **React 
 
 **Postman API Collection:** [Postman](https://md-rakib-hossain2-3669719.postman.co/workspace/MD-RAKIB-HOSSAIN's-Workspace~0624e9eb-2d4b-4beb-8da3-99535b226bad/collection/47419954-2d1c6b5b-a4e0-4bf4-a4ec-65a3957b0f96?action=share&creator=47419954&active-environment=47419954-00dd1665-9a46-4faf-83ae-fd4f823c24fc)
 
-**Overview Vedio of project:** [https://drive.google.com/file/d/1klZ5zbwpwLBy4lstcOXUhEjSFV9gfFyH/view?usp=sharing](https://drive.google.com/file/d/1klZ5zbwpwLBy4lstcOXUhEjSFV9gfFyH/view?usp=sharing)
+**Overview Video of project:** [https://drive.google.com/file/d/1klZ5zbwpwLBy4lstcOXUhEjSFV9gfFyH/view?usp=sharing](https://drive.google.com/file/d/1klZ5zbwpwLBy4lstcOXUhEjSFV9gfFyH/view?usp=sharing)
 
-**Postman API testing vedio:** [https://drive.google.com/file/d/1j2N13E1Gh8tBqwtWUTzE6BHvROwnvmXQ/view?usp=sharing](https://drive.google.com/file/d/1j2N13E1Gh8tBqwtWUTzE6BHvROwnvmXQ/view?usp=sharing)
+**Postman API testing Video:** [https://drive.google.com/file/d/1j2N13E1Gh8tBqwtWUTzE6BHvROwnvmXQ/view?usp=sharing](https://drive.google.com/file/d/1j2N13E1Gh8tBqwtWUTzE6BHvROwnvmXQ/view?usp=sharing)
 
 ---
 
