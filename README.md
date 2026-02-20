@@ -4,8 +4,11 @@ A production-grade **Banking Management System** built with **NestJS**, **React 
 
 **Live Demo:** [https://neocode-forntend719.vercel.app](https://neocode-forntend719.vercel.app)
 
+**Postman API Collection:** [Postman](https://md-rakib-hossain2-3669719.postman.co/workspace/MD-RAKIB-HOSSAIN's-Workspace~0624e9eb-2d4b-4beb-8da3-99535b226bad/collection/47419954-2d1c6b5b-a4e0-4bf4-a4ec-65a3957b0f96?action=share&creator=47419954&active-environment=47419954-00dd1665-9a46-4faf-83ae-fd4f823c24fc)
 
-**Postman Collection:** [Postman](https://md-rakib-hossain2-3669719.postman.co/workspace/MD-RAKIB-HOSSAIN's-Workspace~0624e9eb-2d4b-4beb-8da3-99535b226bad/collection/47419954-2d1c6b5b-a4e0-4bf4-a4ec-65a3957b0f96?action=share&creator=47419954&active-environment=47419954-00dd1665-9a46-4faf-83ae-fd4f823c24fc)
+**Overview Vedio of project:** [https://youtu.be/5kockr3Fe0E](https://youtu.be/5kockr3Fe0E)
+
+**Postman API testing vedio:** [https://youtu.be/nhzLIPRHORI](https://youtu.be/nhzLIPRHORI)
 
 ---
 
